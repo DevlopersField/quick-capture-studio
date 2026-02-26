@@ -27,6 +27,10 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
   // Selection Clipboard (Fabric internal)
   const clipboardRef = useRef<any>(null);
 
+  // Figma-style Zoom & Pan state
+  const isPanningRef = useRef(false);
+  const isSpacePressedRef = useRef(false);
+
   const saveHistory = useCallback(() => {
     if (!canvasRef.current || isHandlingHistoryRef.current) return;
     const json = JSON.stringify(canvasRef.current.toJSON());
@@ -103,75 +107,6 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     canvas.on("selection:updated", updateSelection);
     canvas.on("selection:cleared", updateSelection);
 
-    // --- Figma-style Zoom & Pan ---
-    let isPanning = false;
-    let isSpacePressed = false;
-
-    canvas.on("mouse:wheel", (opt) => {
-      const delta = opt.e.deltaY;
-
-      if (isSpacePressed) {
-        // Figma-style: Space + Scroll = Pan
-        const vpt = canvas.viewportTransform!;
-        if (opt.e.shiftKey) {
-          vpt[4] -= delta; // Horizontal pan
-        } else {
-          vpt[5] -= delta; // Vertical pan
-        }
-        canvas.requestRenderAll();
-        opt.e.preventDefault();
-        opt.e.stopPropagation();
-        return;
-      }
-
-      let zoom = canvas.getZoom();
-      zoom *= 0.999 ** delta;
-      if (zoom > 20) zoom = 20;
-      if (zoom < 0.1) zoom = 0.1;
-
-      // Zoom towards mouse point.
-      canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY } as any, zoom);
-      opt.e.preventDefault();
-      opt.e.stopPropagation();
-    });
-
-    canvas.on("mouse:down", (opt) => {
-      const evt = opt.e as MouseEvent;
-      // Pan if space is pressed OR middle mouse button (button 1)
-      if (isSpacePressed || evt.button === 1) {
-        isPanning = true;
-        canvas.selection = false;
-        canvas.defaultCursor = "grabbing";
-        canvas.setCursor("grabbing");
-        canvas.renderAll();
-      }
-    });
-
-    canvas.on("mouse:move", (opt) => {
-      if (isPanning) {
-        const e = opt.e as MouseEvent;
-        const vpt = canvas.viewportTransform!;
-        vpt[4] += e.movementX;
-        vpt[5] += e.movementY;
-        canvas.requestRenderAll();
-      }
-    });
-
-    canvas.on("mouse:up", () => {
-      if (isPanning) {
-        isPanning = false;
-        if (isSpacePressed) {
-          canvas.defaultCursor = "grab";
-          canvas.setCursor("grab");
-          canvas.selection = false;
-        } else {
-          canvas.defaultCursor = activeTool === "select" ? "default" : "crosshair";
-          canvas.setCursor(canvas.defaultCursor);
-          canvas.selection = activeTool === "select";
-        }
-        canvas.renderAll();
-      }
-    });
 
     const handleSpaceKey = (e: KeyboardEvent) => {
       if (e.code === "Space") {
@@ -184,8 +119,8 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
 
         e.preventDefault();
         if (e.type === "keydown") {
-          if (!isSpacePressed) {
-            isSpacePressed = true;
+          if (!isSpacePressedRef.current) {
+            isSpacePressedRef.current = true;
             canvas.defaultCursor = "grab";
             canvas.setCursor("grab");
             canvas.selection = false;
@@ -193,7 +128,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
             canvas.renderAll();
           }
         } else {
-          isSpacePressed = false;
+          isSpacePressedRef.current = false;
           canvas.defaultCursor = activeTool === "select" ? "default" : "crosshair";
           canvas.setCursor(canvas.defaultCursor);
           canvas.selection = activeTool === "select";
@@ -348,6 +283,66 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     canvas.off("mouse:down");
     canvas.off("mouse:move");
     canvas.off("mouse:up");
+    canvas.off("mouse:wheel");
+
+    // --- Figma-style Zoom & Pan (Always Active) ---
+    canvas.on("mouse:wheel", (opt) => {
+      const delta = opt.e.deltaY;
+      if (isSpacePressedRef.current) {
+        const vpt = canvas.viewportTransform!;
+        if (opt.e.shiftKey) vpt[4] -= delta; else vpt[5] -= delta;
+        canvas.requestRenderAll();
+        opt.e.preventDefault();
+        opt.e.stopPropagation();
+        return;
+      }
+      let zoom = canvas.getZoom();
+      zoom *= 0.999 ** delta;
+      if (zoom > 20) zoom = 20;
+      if (zoom < 0.1) zoom = 0.1;
+      canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY } as any, zoom);
+      opt.e.preventDefault();
+      opt.e.stopPropagation();
+    });
+
+    canvas.on("mouse:down", (opt) => {
+      const evt = opt.e as MouseEvent;
+      if (isSpacePressedRef.current || evt.button === 1) {
+        isPanningRef.current = true;
+        canvas.selection = false;
+        canvas.defaultCursor = "grabbing";
+        canvas.setCursor("grabbing");
+        canvas.requestRenderAll();
+        return;
+      }
+    });
+
+    canvas.on("mouse:move", (opt) => {
+      if (isPanningRef.current) {
+        const e = opt.e as MouseEvent;
+        const vpt = canvas.viewportTransform!;
+        vpt[4] += e.movementX;
+        vpt[5] += e.movementY;
+        canvas.requestRenderAll();
+        return;
+      }
+    });
+
+    canvas.on("mouse:up", () => {
+      if (isPanningRef.current) {
+        isPanningRef.current = false;
+        if (isSpacePressedRef.current) {
+          canvas.defaultCursor = "grab";
+          canvas.setCursor("grab");
+          canvas.selection = false;
+        } else {
+          canvas.defaultCursor = activeTool === "select" ? "default" : "crosshair";
+          canvas.setCursor(canvas.defaultCursor);
+          canvas.selection = activeTool === "select";
+        }
+        canvas.requestRenderAll();
+      }
+    });
 
     if (activeTool === "rectangle") {
       let isDrawing = false;
@@ -355,7 +350,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
       let startX = 0, startY = 0;
 
       canvas.on("mouse:down", (opt) => {
-        if (opt.target) return;
+        if (isSpacePressedRef.current || opt.target) return;
         isDrawing = true;
         const pointer = canvas.getScenePoint(opt.e);
         startX = pointer.x;
@@ -387,7 +382,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
       let line: Line | null = null;
 
       canvas.on("mouse:down", (opt) => {
-        if (opt.target) return;
+        if (isSpacePressedRef.current || opt.target) return;
         isDrawing = true;
         const pointer = canvas.getScenePoint(opt.e);
         line = new Line([pointer.x, pointer.y, pointer.x, pointer.y], {
@@ -435,7 +430,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
 
     if (activeTool === "text") {
       canvas.on("mouse:down", (opt) => {
-        if (opt.target) return;
+        if (isSpacePressedRef.current || opt.target) return;
         const pointer = canvas.getScenePoint(opt.e);
         const text = new IText("Type here", {
           left: pointer.x, top: pointer.y,
@@ -452,7 +447,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
 
     if (activeTool === "comment") {
       canvas.on("mouse:down", (opt) => {
-        if (opt.target) return;
+        if (isSpacePressedRef.current || opt.target) return;
         const pointer = canvas.getScenePoint(opt.e);
         commentCountRef.current += 1;
         const num = commentCountRef.current;

@@ -74,33 +74,33 @@ async function captureFullPage() {
     const originalOverflow = document.documentElement.style.overflow;
     document.documentElement.style.setProperty('overflow', 'hidden', 'important');
 
+    const scrollOverlap = 100;
+    const scrollStep = viewportHeight - scrollOverlap;
+
     let currentY = 0;
     const scrollSteps = [];
     while (currentY < documentHeight) {
         scrollSteps.push(currentY);
-        currentY += viewportHeight;
-        if (currentY >= documentHeight) {
-            // If the last step doesn't reach the bottom (because of pagination), add a final step 
-            // that is exactly at the bottom.
-            const lastStep = scrollSteps[scrollSteps.length - 1];
-            if (lastStep + viewportHeight < documentHeight) {
-                scrollSteps.push(documentHeight - viewportHeight);
-            }
-            break;
-        }
+        if (currentY + viewportHeight >= documentHeight) break;
+        currentY += scrollStep;
+    }
+
+    // Ensure last step is exactly at the bottom if not already
+    if (scrollSteps[scrollSteps.length - 1] + viewportHeight < documentHeight) {
+        scrollSteps.push(documentHeight - viewportHeight);
     }
 
     for (let i = 0; i < scrollSteps.length; i++) {
-        const y = scrollSteps[i];
-        window.scrollTo(0, Math.floor(y));
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Increased wait for stability
+        const y = Math.floor(scrollSteps[i]); // Force integer scroll
+        window.scrollTo(0, y);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Stability wait
 
         let filter: 'all' | 'headerOnly' | 'footerOnly' | 'none' = 'all';
         if (i === 0) filter = 'headerOnly';
         else if (i === scrollSteps.length - 1) filter = 'footerOnly';
 
         toggleFixedElements(filter, true);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await new Promise(resolve => setTimeout(resolve, 800)); // Fixed element sync wait
 
         overlay.style.setProperty('visibility', 'hidden', 'important');
         if (recorderWidget) recorderWidget.style.setProperty('visibility', 'hidden', 'important');
@@ -125,26 +125,28 @@ async function captureFullPage() {
         let drawHeight = viewportHeight;
 
         if (i > 0) {
+            // Because we overlapped by 100px, the first 100px of this capture 
+            // are already on the canvas from the previous capture.
             const prevEnd = scrollSteps[i - 1] + viewportHeight;
             if (y < prevEnd) {
                 const overlap = prevEnd - y;
-                sourceY = overlap * scale;
-                destY = y + overlap;
+                sourceY = overlap; // Start drawing from after the overlap in the source image
+                destY = y + overlap; // Place it after the already drawn part
                 drawHeight = viewportHeight - overlap;
             }
         }
 
-        // Clamp to document bottom for the last step
+        // Clamp to document bottom
         if (destY + drawHeight > documentHeight) drawHeight = documentHeight - destY;
 
         if (drawHeight > 0) {
             ctx.drawImage(img,
-                0, Math.round(sourceY), img.width, Math.round(drawHeight * scale),
-                0, Math.round(destY * scale), img.width, Math.round(drawHeight * scale)
+                0, Math.round(sourceY * scale), Math.round(img.width), Math.round(drawHeight * scale),
+                0, Math.round(destY * scale), Math.round(img.width), Math.round(drawHeight * scale)
             );
         }
 
-        // overlay.innerText = `Capturing... ${Math.round(((i + 1) / scrollSteps.length) * 100)}%`; // Removed per user request
+        // overlay.innerText = ... // Removed
         toggleFixedElements('none', false);
     }
 
