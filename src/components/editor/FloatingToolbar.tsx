@@ -25,7 +25,7 @@ interface Props {
   // Action props
   onUpload: () => void;
   onExport: () => void;
-  hasPiP?: boolean;
+
   strokeColor: string;
   onColorChange: (color: string) => void;
 }
@@ -55,7 +55,6 @@ export function FloatingToolbar({
   onRecordToggleMute, formatTime,
   onUpload, onExport,
   strokeColor, onColorChange,
-  hasPiP = false,
 }: Props) {
   const isRecording = recorderState === "recording" || recorderState === "paused";
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -65,7 +64,7 @@ export function FloatingToolbar({
       <div className="glass-panel rounded-2xl px-3 py-2.5 flex items-center gap-1 shadow-2xl shadow-black/40 pointer-events-auto max-w-fit relative">
 
         {/* === Annotation Tools (Left) === */}
-        {!hasPiP ? (
+        {
           <div className="flex items-center gap-0.5 animate-fade-in">
             {/* Minimal Vertical Color Picker */}
             <div className="relative mr-1.5 pr-2 border-r border-border/40 flex items-center">
@@ -135,39 +134,23 @@ export function FloatingToolbar({
               <Trash2 size={18} />
             </button>
           </div>
-        ) : (
-          <div className="flex items-center gap-3 px-3 py-1.5 text-xs text-muted-foreground animate-fade-in">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: strokeColor }} />
-              Mini tools active in floating window
-            </div>
-          </div>
-        )}
+        }
 
         {/* Divider */}
         <div className="w-px h-8 bg-border/50 mx-2" />
 
         {/* === Recording Controls (Center) === */}
-        {isRecording && hasPiP ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 animate-fade-in">
-            <span className="recording-dot" />
-            <span className="text-xs font-mono text-foreground/70 tabular-nums">
-              {formatTime(recorderElapsed)}
-            </span>
-          </div>
-        ) : (
-          <RecordingController
-            state={recorderState}
-            elapsed={recorderElapsed}
-            isMuted={recorderIsMuted}
-            onStart={onRecordStart}
-            onStop={onRecordStop}
-            onPause={onRecordPause}
-            onResume={onRecordResume}
-            onToggleMute={onRecordToggleMute}
-            formatTime={formatTime}
-          />
-        )}
+        <RecordingController
+          state={recorderState}
+          elapsed={recorderElapsed}
+          isMuted={recorderIsMuted}
+          onStart={onRecordStart}
+          onStop={onRecordStop}
+          onPause={onRecordPause}
+          onResume={onRecordResume}
+          onToggleMute={onRecordToggleMute}
+          formatTime={formatTime}
+        />
 
         {/* Divider */}
         <div className="w-px h-8 bg-border/50 mx-2" />

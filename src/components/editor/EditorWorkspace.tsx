@@ -98,20 +98,32 @@ export function EditorWorkspace() {
     }
   }, [setActiveTool]);
 
-  // Handle recording stop — PiP remains open (sticky)
+  // Handle recording stop
   const handleRecordStop = useCallback(() => {
     recorder.stopRecording();
-    // closePiP(); // Removed to keep tools sticky
-  }, [recorder.stopRecording]);
+    closePiP();
+  }, [recorder.stopRecording, closePiP]);
 
-  // Open PiP when recording starts, close when it ends
+  // Auto-open PiP when user leaves studio tab during recording
   useEffect(() => {
-    if (recorder.state === "recording" && !pipWindow) {
-      openPiP(320, 56);
-    } else if (recorder.state === "idle") {
+    const isRecordingNow = recorder.state === "recording" || recorder.state === "paused";
+    if (!isRecordingNow) return;
+
+    const handleVisibility = () => {
+      if (document.hidden && !pipWindow) {
+        openPiP(380, 72);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [recorder.state, pipWindow, openPiP]);
+
+  // Close PiP when recording ends
+  useEffect(() => {
+    if (recorder.state === "idle" || recorder.state === "finished") {
       closePiP();
     }
-  }, [recorder.state, pipWindow, openPiP, closePiP]);
+  }, [recorder.state, closePiP]);
 
   // Auto-open Export Modal when recording finishes
   useEffect(() => {
@@ -258,7 +270,6 @@ export function EditorWorkspace() {
         formatTime={recorder.formatTime}
         onUpload={() => fileInputRef.current?.click()}
         onExport={() => setShowExport(true)}
-        hasPiP={!!pipWindow}
         strokeColor={strokeColor}
         onColorChange={setStrokeColor}
         hasSelection={hasSelection}
@@ -275,6 +286,14 @@ export function EditorWorkspace() {
           onColorChange={setStrokeColor}
           hasSelection={hasSelection}
           theme={theme}
+          recorderState={recorder.state}
+          recorderElapsed={recorder.elapsed}
+          recorderIsMuted={recorder.isMuted}
+          onRecordStop={handleRecordStop}
+          onRecordPause={recorder.pauseRecording}
+          onRecordResume={recorder.resumeRecording}
+          onRecordToggleMute={recorder.toggleMute}
+          formatTime={recorder.formatTime}
         />
       )}
 
