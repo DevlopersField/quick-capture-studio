@@ -27,6 +27,16 @@ export default defineConfig(({ mode }) => ({
         content: path.resolve(__dirname, "src/content.ts"),
         background: path.resolve(__dirname, "src/background.ts"),
       },
+      output: {
+        entryFileNames: (chunkInfo) => {
+          if (["content", "background"].includes(chunkInfo.name)) {
+            return "assets/[name].js";
+          }
+          return "assets/[name]-[hash].js";
+        },
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash].[ext]",
+      },
     },
   },
 }));

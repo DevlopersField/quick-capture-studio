@@ -12,6 +12,7 @@
     },
     "permissions": [
         "storage",
+        "unlimitedStorage",
         "tabs",
         "activeTab",
         "scripting",
@@ -27,9 +28,6 @@
             ],
             "js": [
                 "assets/content.js"
-            ],
-            "css": [
-                "assets/content.css"
             ]
         }
     ],

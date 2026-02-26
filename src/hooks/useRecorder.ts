@@ -243,5 +243,6 @@ export function useRecorder() {
     state, elapsed, isMuted, videoUrl,
     startRecording, stopRecording, pauseRecording, resumeRecording,
     toggleMute, downloadVideo, reset, formatTime,
+    setVideoUrl, setState
   };
 }

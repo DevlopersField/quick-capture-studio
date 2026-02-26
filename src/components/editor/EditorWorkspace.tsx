@@ -43,14 +43,17 @@ export function EditorWorkspace() {
         fileInputRef.current?.click();
       } else if (mode === "capture") {
         try {
-          const result = await chrome.storage.local.get("capturedImage");
+          const result = await chrome.storage.local.get(["capturedImage", "capturedVideo"]);
           if (result.capturedImage) {
-            loadImage(result.capturedImage);
-            // Clear storage after loading
+            loadImage(result.capturedImage as string);
             await chrome.storage.local.remove("capturedImage");
+          } else if (result.capturedVideo) {
+            recorder.setVideoUrl(result.capturedVideo as string);
+            recorder.setState("finished");
+            await chrome.storage.local.remove("capturedVideo");
           }
         } catch (err) {
-          console.error("Failed to load captured image:", err);
+          console.error("Failed to load captured media:", err);
         }
       }
     }, 500);
