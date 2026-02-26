@@ -39,8 +39,22 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     const ro = new ResizeObserver(handleResize);
     ro.observe(container);
 
+    // Keyboard delete handler
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === "Delete" || e.key === "Backspace") && canvas.getActiveObjects().length > 0) {
+        // Don't delete if user is typing in an IText
+        const target = e.target as HTMLElement;
+        if (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable) return;
+        canvas.getActiveObjects().forEach(obj => canvas.remove(obj));
+        canvas.discardActiveObject();
+        canvas.renderAll();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+
     return () => {
       ro.disconnect();
+      document.removeEventListener("keydown", handleKeyDown);
       canvas.dispose();
       canvasRef.current = null;
     };

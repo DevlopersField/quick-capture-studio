@@ -1,12 +1,10 @@
-import { useRef, useCallback } from "react";
-import { Upload, Download, Camera } from "lucide-react";
+import { useRef, useCallback, useState } from "react";
+import { Camera, MessageCircle } from "lucide-react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useRecorder } from "@/hooks/useRecorder";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { CommentPanel } from "./CommentPanel";
-import { RecordingController } from "./RecordingController";
 import { ExportModal } from "./ExportModal";
-import { useState } from "react";
 
 // Demo image for mock capture
 const MOCK_IMAGE = "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&q=80";
@@ -15,6 +13,7 @@ export function EditorWorkspace() {
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showExport, setShowExport] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   const {
     activeTool, setActiveTool, comments,
@@ -29,72 +28,53 @@ export function EditorWorkspace() {
     if (file) loadImageFromFile(file);
   }, [loadImageFromFile]);
 
+  // When comment tool is selected, auto-open the comment panel
+  const handleToolChange = useCallback((tool: typeof activeTool) => {
+    setActiveTool(tool);
+    if (tool === "comment") {
+      setShowComments(true);
+    }
+  }, [setActiveTool]);
+
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
-      {/* Main Canvas Area */}
+    <div className="flex h-screen w-full bg-background overflow-hidden relative">
+      {/* Floating Logo Badge (top-left) */}
+      <div className="absolute top-4 left-4 z-30 flex items-center gap-2 glass-panel rounded-xl px-3 py-2 animate-fade-in">
+        <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+          <Camera size={14} className="text-primary-foreground" />
+        </div>
+        <span className="text-sm font-semibold text-foreground tracking-tight">1ClickCapture</span>
+      </div>
+
+      {/* Comment Panel Toggle (top-right) */}
+      <button
+        onClick={() => setShowComments(prev => !prev)}
+        className={`absolute top-4 right-4 z-30 flex items-center gap-1.5 glass-panel rounded-xl px-3 py-2 transition-all duration-200 hover:scale-[1.03] animate-fade-in ${showComments ? "border-primary/40 text-primary" : "text-muted-foreground hover:text-foreground"
+          }`}
+      >
+        <MessageCircle size={16} />
+        <span className="text-sm font-medium">
+          {comments.length > 0 ? comments.length : ""}
+        </span>
+      </button>
+
+      {/* Canvas Area */}
       <div className="flex-1 flex flex-col relative">
-        {/* Top Bar */}
-        <header className="flex items-center justify-between px-4 py-2.5 bg-card border-b border-border z-10">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-                <Camera size={14} className="text-primary-foreground" />
-              </div>
-              <span className="text-sm font-semibold text-foreground tracking-tight">1ClickCapture</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <RecordingController
-              state={recorder.state}
-              elapsed={recorder.elapsed}
-              isMuted={recorder.isMuted}
-              onStart={recorder.startRecording}
-              onStop={recorder.stopRecording}
-              onToggleMute={recorder.toggleMute}
-              formatTime={recorder.formatTime}
-            />
-            <div className="w-px h-6 bg-border" />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
-            >
-              <Upload size={15} />
-              Upload
-            </button>
-            <button
-              onClick={() => loadImage(MOCK_IMAGE)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
-            >
-              <Camera size={15} />
-              Mock Capture
-            </button>
-            <button
-              onClick={() => setShowExport(true)}
-              className="flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 glow-cyan-sm transition-all"
-            >
-              <Download size={15} />
-              Export
-            </button>
-          </div>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-        </header>
-
-        {/* Floating Toolbar */}
-        <FloatingToolbar activeTool={activeTool} onToolChange={setActiveTool} onDelete={deleteSelected} />
-
-        {/* Canvas */}
-        <div ref={containerRef} className="flex-1 relative overflow-hidden">
+        <div ref={containerRef} className="flex-1 relative overflow-hidden pb-[72px]">
           <canvas id="editor-canvas" />
+
           {/* Empty State */}
           {!hasImage && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-              <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                <div className="w-16 h-16 rounded-2xl bg-secondary/50 flex items-center justify-center">
-                  <Camera size={28} className="text-primary/60" />
+              <div className="flex flex-col items-center gap-5 text-muted-foreground animate-fade-in">
+                <div className="w-20 h-20 rounded-2xl bg-secondary/30 flex items-center justify-center border border-border/30">
+                  <Camera size={32} className="text-primary/40" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground/60">No capture loaded</p>
-                  <p className="text-xs text-muted-foreground mt-1">Upload an image or use Mock Capture to get started</p>
+                  <p className="text-base font-medium text-foreground/50">No capture loaded</p>
+                  <p className="text-sm text-muted-foreground/60 mt-1.5 max-w-xs leading-relaxed">
+                    Upload an image, use Mock Capture, or start a screen recording to get started
+                  </p>
                 </div>
               </div>
             </div>
@@ -102,15 +82,35 @@ export function EditorWorkspace() {
         </div>
       </div>
 
-      {/* Comment Side Panel */}
-      <aside className="w-72 bg-card border-l border-border flex flex-col">
-        <div className="px-4 py-3 border-b border-border">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Feedback</h2>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <CommentPanel comments={comments} onUpdate={updateComment} />
-        </div>
-      </aside>
+      {/* Comment Side Panel (collapsible) */}
+      <CommentPanel
+        comments={comments}
+        onUpdate={updateComment}
+        isOpen={showComments}
+        onClose={() => setShowComments(false)}
+      />
+
+      {/* Unified Bottom Toolbar */}
+      <FloatingToolbar
+        activeTool={activeTool}
+        onToolChange={handleToolChange}
+        onDelete={deleteSelected}
+        recorderState={recorder.state}
+        recorderElapsed={recorder.elapsed}
+        recorderIsMuted={recorder.isMuted}
+        onRecordStart={recorder.startRecording}
+        onRecordStop={recorder.stopRecording}
+        onRecordPause={recorder.pauseRecording}
+        onRecordResume={recorder.resumeRecording}
+        onRecordToggleMute={recorder.toggleMute}
+        formatTime={recorder.formatTime}
+        onUpload={() => fileInputRef.current?.click()}
+        onMockCapture={() => loadImage(MOCK_IMAGE)}
+        onExport={() => setShowExport(true)}
+      />
+
+      {/* Hidden File Input */}
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
 
       {/* Export Modal */}
       <ExportModal

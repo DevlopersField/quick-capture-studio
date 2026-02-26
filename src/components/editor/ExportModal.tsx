@@ -18,38 +18,57 @@ export function ExportModal({
     {
       icon: Image, label: "Download PNG", desc: "Flattened canvas image",
       onClick: onExportPNG, available: true,
+      gradient: "from-cyan-500/10 to-blue-500/10",
     },
     {
       icon: FileText, label: "Download PDF", desc: "Export as PDF document",
       onClick: onExportPDF, available: true,
+      gradient: "from-purple-500/10 to-pink-500/10",
     },
     {
-      icon: Video, label: "Save Video", desc: videoUrl ? "Download recording" : "Record first",
+      icon: Video, label: "Save Video", desc: videoUrl ? "Download recording" : "Record a session first",
       onClick: onDownloadVideo, available: !!videoUrl,
+      gradient: "from-red-500/10 to-orange-500/10",
     },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-card border border-border rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-fade-in"
+        className="glass-panel rounded-2xl w-full max-w-sm p-6 shadow-2xl shadow-black/50 animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-foreground">Export</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
+          >
             <X size={18} />
           </button>
         </div>
+
+        {/* Video Preview */}
+        {videoUrl && (
+          <div className="mb-4 rounded-xl overflow-hidden border border-border/40">
+            <video
+              src={videoUrl}
+              controls
+              className="w-full h-auto max-h-40 bg-black"
+              preload="metadata"
+            />
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
-          {options.map(({ icon: Icon, label, desc, onClick, available }) => (
+          {options.map(({ icon: Icon, label, desc, onClick, available, gradient }) => (
             <button
               key={label}
               onClick={() => { onClick(); onClose(); }}
               disabled={!available}
-              className="flex items-center gap-3 w-full p-3.5 rounded-xl text-left transition-all duration-150 border border-transparent hover:border-primary/30 hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed group"
+              className={`flex items-center gap-3 w-full p-3.5 rounded-xl text-left transition-all duration-200 border border-transparent hover:border-primary/20 hover:bg-gradient-to-r ${gradient} disabled:opacity-30 disabled:cursor-not-allowed group hover:scale-[1.01]`}
             >
-              <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-secondary/50 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
                 <Icon size={20} className="text-primary" />
               </div>
               <div>

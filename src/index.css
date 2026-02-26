@@ -76,4 +76,28 @@
   .glow-cyan-sm {
     box-shadow: 0 0 10px hsl(var(--cyan-glow) / 0.15);
   }
+  .glass-panel {
+    background: hsl(var(--toolbar) / 0.85);
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    border: 1px solid hsl(var(--border) / 0.6);
+  }
+  .recording-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: hsl(var(--destructive));
+    animation: recording-pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes recording-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 4px hsl(0 72% 55% / 0.4);
+  }
+  50% {
+    opacity: 0.4;
+    box-shadow: 0 0 16px hsl(0 72% 55% / 0.7);
+  }
 }
