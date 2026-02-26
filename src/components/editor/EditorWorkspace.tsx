@@ -9,8 +9,6 @@ import { CommentPanel } from "./CommentPanel";
 import { ExportModal } from "./ExportModal";
 import { PiPController } from "./PiPController";
 
-// Demo image for mock capture
-const MOCK_IMAGE = "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&q=80";
 
 export function EditorWorkspace() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -133,15 +131,18 @@ export function EditorWorkspace() {
 
           {/* Empty State */}
           {!hasImage && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-              <div className="flex flex-col items-center gap-5 text-muted-foreground animate-fade-in text-center px-6">
-                <div className="w-20 h-20 rounded-2xl bg-secondary/30 flex items-center justify-center border border-border/30 shadow-inner">
-                  <Camera size={32} className="text-primary/40" />
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer z-10 group"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className="flex flex-col items-center gap-5 text-muted-foreground animate-fade-in text-center px-6 transition-transform group-hover:scale-[1.02] duration-300">
+                <div className="w-20 h-20 rounded-2xl bg-secondary/30 flex items-center justify-center border border-border/30 shadow-inner group-hover:border-primary/40 group-hover:bg-secondary/50 transition-all">
+                  <Camera size={32} className="text-primary/40 group-hover:text-primary/60 transition-colors" />
                 </div>
                 <div>
-                  <p className="text-base font-semibold text-foreground">No capture loaded</p>
+                  <p className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">No capture loaded</p>
                   <p className="text-sm text-muted-foreground mt-1.5 max-w-xs leading-relaxed font-medium">
-                    Upload an image or start a screen recording to begin annotating
+                    Click here to upload an image or start a screen recording to begin annotating
                   </p>
                 </div>
               </div>
@@ -173,7 +174,6 @@ export function EditorWorkspace() {
         onRecordToggleMute={recorder.toggleMute}
         formatTime={recorder.formatTime}
         onUpload={() => fileInputRef.current?.click()}
-        onMockCapture={() => loadImage(MOCK_IMAGE)}
         onExport={() => setShowExport(true)}
         hasPiP={!!pipWindow}
         strokeColor={strokeColor}
