@@ -22,10 +22,7 @@ export function SelectionPopup() {
             if (!tab?.id) return;
 
             if (isFullPage) {
-                const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
-                await chrome.storage.local.set({ capturedImage: dataUrl });
-                const url = chrome.runtime.getURL("index.html#/?mode=capture");
-                chrome.tabs.create({ url });
+                chrome.tabs.sendMessage(tab.id, { action: "startFullPageCapture" });
                 window.close();
             } else {
                 // Trigger area selection in content script
