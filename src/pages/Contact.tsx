@@ -27,38 +27,21 @@ export default function Contact() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-6">
+                <div className="grid grid-cols-1 gap-6 w-full mb-6">
                     {/* Email Support Card */}
-                    <div className="glass-panel p-8 rounded-3xl border border-border/40 hover:border-primary/40 transition-all group flex flex-col h-full">
+                    <div className="glass-panel p-8 rounded-3xl border border-border/40 hover:border-primary/40 transition-all group flex flex-col h-full items-center text-center">
                         <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 border border-primary/20">
                             <Mail className="text-primary" size={24} />
                         </div>
                         <h3 className="text-xl font-bold mb-3">Email Support</h3>
-                        <p className="text-muted-foreground mb-8 leading-relaxed">
+                        <p className="text-muted-foreground mb-8 leading-relaxed max-w-sm">
                             For general inquiries and bug reports, reach out via email.
                         </p>
                         <a
                             href="mailto:virajdev3052003@gmail.com"
-                            className="mt-auto text-primary font-bold hover:underline decoration-2 underline-offset-4 tracking-tight"
+                            className="mt-auto text-primary font-bold hover:underline decoration-2 underline-offset-4 tracking-tight text-xl"
                         >
                             virajdev3052003@gmail.com
-                        </a>
-                    </div>
-
-                    {/* Website Card */}
-                    <div className="glass-panel p-8 rounded-3xl border border-border/40 hover:border-primary/40 transition-all group flex flex-col h-full">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6 border border-blue-500/20">
-                            <Globe className="text-blue-500" size={24} />
-                        </div>
-                        <h3 className="text-xl font-bold mb-3">Website</h3>
-                        <p className="text-muted-foreground mb-8 leading-relaxed">
-                            Visit our official website for documentation and updates.
-                        </p>
-                        <a
-                            href="https://webauditlens.netlify.app"
-                            className="mt-auto text-blue-500 font-bold hover:underline decoration-2 underline-offset-4 tracking-tight"
-                        >
-                            webauditlens.netlify.app
                         </a>
                     </div>
                 </div>
