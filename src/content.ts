@@ -633,8 +633,52 @@ async function startRecording() {
             if (overlay) document.body.removeChild(overlay);
             try {
                 chrome.storage.local.set({ isRecording: true });
-                currentStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-                mediaRecorder = new MediaRecorder(currentStream);
+                
+                // Get display media with audio
+                currentStream = await navigator.mediaDevices.getDisplayMedia({ 
+                    video: true, 
+                    audio: true 
+                });
+
+                let combinedStream = currentStream;
+
+                // Try to get microphone audio and merge it
+                try {
+                    const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const audioContext = new AudioContext();
+                    const destination = audioContext.createMediaStreamDestination();
+
+                    // Connect display audio if available
+                    const displayAudioTracks = currentStream.getAudioTracks();
+                    if (displayAudioTracks.length > 0) {
+                        const displaySource = audioContext.createMediaStreamSource(new MediaStream(displayAudioTracks));
+                        displaySource.connect(destination);
+                    }
+
+                    // Connect microphone audio
+                    const micSource = audioContext.createMediaStreamSource(micStream);
+                    micSource.connect(destination);
+
+                    // Resume AudioContext just in case it's suspended
+                    if (audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                    }
+
+                    // Create new combined stream with video from display and audio from merger
+                    combinedStream = new MediaStream([
+                        ...currentStream.getVideoTracks(),
+                        ...destination.stream.getAudioTracks()
+                    ]);
+
+                    // Add mic tracks to cleanup
+                    micStream.getTracks().forEach(track => {
+                        currentStream?.addTrack(track); // Add to currentStream for centralized cleanup
+                    });
+                } catch (micErr) {
+                    console.warn("Could not capture microphone, recording with display audio only:", micErr);
+                }
+
+                mediaRecorder = new MediaRecorder(combinedStream);
                 recordedChunks = [];
                 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
                 mediaRecorder.onstop = () => {

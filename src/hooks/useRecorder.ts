@@ -99,8 +99,10 @@ export function useRecorder() {
       if (systemAudioTracks.length > 0 || micStream) {
         try {
           console.log("Initializing AudioContext for merging...");
-          const audioContext = new AudioContext();
-          const destination = audioContext.createMediaStreamDestination();
+          // Resume AudioContext if it's suspended
+          if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+          }
 
           // System audio (if available from getDisplayMedia)
           if (systemAudioTracks.length > 0) {
@@ -126,8 +128,14 @@ export function useRecorder() {
         } catch (audioErr) {
           console.error("Failed to merge audio streams:", audioErr);
           // Fallback: just add original audio tracks if merging fails
-          systemAudioTracks.forEach(track => combinedStream.addTrack(track));
-          micStream?.getAudioTracks().forEach(track => combinedStream.addTrack(track));
+          systemAudioTracks.forEach(track => {
+            console.log("Fallback: adding system audio track directly");
+            combinedStream.addTrack(track);
+          });
+          micStream?.getAudioTracks().forEach(track => {
+            console.log("Fallback: adding mic audio track directly");
+            combinedStream.addTrack(track);
+          });
         }
       }
 
