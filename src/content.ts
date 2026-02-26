@@ -68,14 +68,7 @@ async function captureFullPage() {
 
     const overlay = document.createElement('div');
     overlay.id = 'oneclick-progress-overlay';
-    overlay.style.cssText = `
-        position: fixed; top: 20px; right: 20px; 
-        background: #0d0f14; color: white; padding: 12px 20px; 
-        border-radius: 8px; z-index: ${MAX_Z_INDEX} !important; font-family: sans-serif;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
-        pointer-events: none;
-    `;
-    overlay.innerText = "Initializing Full Page Capture...";
+    overlay.style.cssText = `position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 12px 20px; border-radius: 12px; z-index: ${MAX_Z_INDEX} !important; font-family: sans-serif; pointer-events: none; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); display: none;`; // Hidden by default
     document.body.appendChild(overlay);
 
     const originalOverflow = document.documentElement.style.overflow;
@@ -87,7 +80,10 @@ async function captureFullPage() {
         scrollSteps.push(currentY);
         currentY += viewportHeight;
         if (currentY >= documentHeight) {
-            if (scrollSteps[scrollSteps.length - 1] + viewportHeight < documentHeight) {
+            // If the last step doesn't reach the bottom (because of pagination), add a final step 
+            // that is exactly at the bottom.
+            const lastStep = scrollSteps[scrollSteps.length - 1];
+            if (lastStep + viewportHeight < documentHeight) {
                 scrollSteps.push(documentHeight - viewportHeight);
             }
             break;
@@ -96,7 +92,8 @@ async function captureFullPage() {
 
     for (let i = 0; i < scrollSteps.length; i++) {
         const y = scrollSteps[i];
-        window.scrollTo(0, y);
+        window.scrollTo(0, Math.floor(y));
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Increased wait for stability
 
         let filter: 'all' | 'headerOnly' | 'footerOnly' | 'none' = 'all';
         if (i === 0) filter = 'headerOnly';
@@ -128,22 +125,26 @@ async function captureFullPage() {
         let drawHeight = viewportHeight;
 
         if (i > 0) {
-            const prevY = scrollSteps[i - 1];
-            if (y < prevY + viewportHeight) {
-                const overlap = (prevY + viewportHeight) - y;
+            const prevEnd = scrollSteps[i - 1] + viewportHeight;
+            if (y < prevEnd) {
+                const overlap = prevEnd - y;
                 sourceY = overlap * scale;
                 destY = y + overlap;
                 drawHeight = viewportHeight - overlap;
             }
         }
 
+        // Clamp to document bottom for the last step
         if (destY + drawHeight > documentHeight) drawHeight = documentHeight - destY;
 
         if (drawHeight > 0) {
-            ctx.drawImage(img, 0, sourceY, img.width, drawHeight * scale, 0, destY * scale, img.width, drawHeight * scale);
+            ctx.drawImage(img,
+                0, Math.round(sourceY), img.width, Math.round(drawHeight * scale),
+                0, Math.round(destY * scale), img.width, Math.round(drawHeight * scale)
+            );
         }
 
-        overlay.innerText = `Capturing... ${Math.round(((i + 1) / scrollSteps.length) * 100)}%`;
+        // overlay.innerText = `Capturing... ${Math.round(((i + 1) / scrollSteps.length) * 100)}%`; // Removed per user request
         toggleFixedElements('none', false);
     }
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Canvas, Rect, Line, PencilBrush, IText, Circle, Group, Textbox, FabricImage, util } from "fabric";
+import { Canvas, Rect, Line, PencilBrush, IText, Circle, Group, Textbox, FabricImage, util, Shadow } from "fabric";
 
 export type ToolType = "select" | "rectangle" | "arrow" | "pencil" | "text" | "comment";
 
@@ -109,13 +109,27 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
 
     canvas.on("mouse:wheel", (opt) => {
       const delta = opt.e.deltaY;
+
+      if (isSpacePressed) {
+        // Figma-style: Space + Scroll = Pan
+        const vpt = canvas.viewportTransform!;
+        if (opt.e.shiftKey) {
+          vpt[4] -= delta; // Horizontal pan
+        } else {
+          vpt[5] -= delta; // Vertical pan
+        }
+        canvas.requestRenderAll();
+        opt.e.preventDefault();
+        opt.e.stopPropagation();
+        return;
+      }
+
       let zoom = canvas.getZoom();
       zoom *= 0.999 ** delta;
       if (zoom > 20) zoom = 20;
       if (zoom < 0.1) zoom = 0.1;
 
-      // Zoom towards center of viewport for trackpad, or mouse point?
-      // Figma zooms toward mouse point.
+      // Zoom towards mouse point.
       canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY } as any, zoom);
       opt.e.preventDefault();
       opt.e.stopPropagation();
@@ -128,6 +142,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
         isPanning = true;
         canvas.selection = false;
         canvas.defaultCursor = "grabbing";
+        canvas.setCursor("grabbing");
         canvas.renderAll();
       }
     });
@@ -145,8 +160,15 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     canvas.on("mouse:up", () => {
       if (isPanning) {
         isPanning = false;
-        canvas.selection = true;
-        canvas.defaultCursor = isSpacePressed ? "grab" : "default";
+        if (isSpacePressed) {
+          canvas.defaultCursor = "grab";
+          canvas.setCursor("grab");
+          canvas.selection = false;
+        } else {
+          canvas.defaultCursor = activeTool === "select" ? "default" : "crosshair";
+          canvas.setCursor(canvas.defaultCursor);
+          canvas.selection = activeTool === "select";
+        }
         canvas.renderAll();
       }
     });
@@ -165,13 +187,17 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
           if (!isSpacePressed) {
             isSpacePressed = true;
             canvas.defaultCursor = "grab";
+            canvas.setCursor("grab");
             canvas.selection = false;
+            canvas.isDrawingMode = false; // Disable drawing while panning
             canvas.renderAll();
           }
         } else {
           isSpacePressed = false;
-          canvas.defaultCursor = "default";
-          canvas.selection = true;
+          canvas.defaultCursor = activeTool === "select" ? "default" : "crosshair";
+          canvas.setCursor(canvas.defaultCursor);
+          canvas.selection = activeTool === "select";
+          canvas.isDrawingMode = activeTool === "pencil"; // Restore drawing if pencil was selected
           canvas.renderAll();
         }
       }
@@ -474,6 +500,12 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
       fabricImage.set({
         left: (canvas.width! - fabricImage.width! * scale) / 2,
         top: (canvas.height! - fabricImage.height! * scale) / 2,
+        shadow: new Shadow({
+          color: "rgba(0,0,0,0.3)",
+          blur: 20,
+          offsetX: 0,
+          offsetY: 8,
+        }),
       });
       canvas.clear();
       // Keep background color when loading new image
