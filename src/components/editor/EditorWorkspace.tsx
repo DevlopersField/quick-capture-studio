@@ -22,12 +22,24 @@ export function EditorWorkspace() {
     activeTool, setActiveTool, comments,
     loadImage, loadImageFromFile, exportPNG, exportPDF,
     deleteSelected, updateComment, hasImage,
-    strokeColor, setStrokeColor,
+    strokeColor, setStrokeColor, setCanvasBackground,
   } = useCanvas(containerRef);
 
   const recorder = useRecorder();
   const { pipWindow, openPiP, closePiP } = usePictureInPicture();
   const { theme, setTheme } = useTheme();
+
+  // Sync canvas background with theme
+  useEffect(() => {
+    // Resolve "system" to actual light/dark
+    let effective = theme;
+    if (theme === "system") {
+      effective = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+
+    const bgColor = effective === "dark" ? "#0d0f14" : "#f9fafb";
+    setCanvasBackground(bgColor);
+  }, [theme, setCanvasBackground]);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -127,8 +139,8 @@ export function EditorWorkspace() {
                   <Camera size={32} className="text-primary/40" />
                 </div>
                 <div>
-                  <p className="text-base font-semibold text-foreground/70">No capture loaded</p>
-                  <p className="text-sm text-muted-foreground/50 mt-1.5 max-w-xs leading-relaxed">
+                  <p className="text-base font-semibold text-foreground">No capture loaded</p>
+                  <p className="text-sm text-muted-foreground mt-1.5 max-w-xs leading-relaxed font-medium">
                     Upload an image or start a screen recording to begin annotating
                   </p>
                 </div>
@@ -177,6 +189,7 @@ export function EditorWorkspace() {
           onDelete={deleteSelected}
           strokeColor={strokeColor}
           onColorChange={setStrokeColor}
+          theme={theme}
         />
       )}
 

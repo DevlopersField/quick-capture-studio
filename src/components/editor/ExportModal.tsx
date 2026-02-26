@@ -33,9 +33,9 @@ export function ExportModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]" onClick={onClose}>
       <div
-        className="glass-panel rounded-2xl w-full max-w-sm p-6 shadow-2xl shadow-black/50 animate-fade-in"
+        className="glass-panel rounded-2xl w-full max-w-sm p-6 shadow-[0_20px_50px_rgba(0,0,0,0.2)] animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">

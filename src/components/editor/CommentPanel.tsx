@@ -18,7 +18,7 @@ export function CommentPanel({ comments, onUpdate, isOpen, onClose }: Props) {
   if (!isOpen) return null;
 
   return (
-    <aside className="fixed top-0 right-0 h-full w-80 z-40 glass-panel border-l border-border/40 flex flex-col animate-slide-in-right shadow-2xl shadow-black/50">
+    <aside className="fixed top-0 right-0 h-full w-80 z-40 glass-panel border-l border-border/40 flex flex-col animate-slide-in-right shadow-[0_0_40px_rgba(0,0,0,0.1)]">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
         <div className="flex items-center gap-2">
@@ -57,7 +57,7 @@ export function CommentPanel({ comments, onUpdate, isOpen, onClose }: Props) {
             {comments.map((c) => (
               <div
                 key={c.id}
-                className="bg-surface/60 rounded-xl p-3 border border-border/30 animate-fade-in hover:border-border/60 transition-colors"
+                className="bg-secondary/30 rounded-xl p-3 border border-border/40 animate-fade-in hover:border-primary/20 transition-all duration-200"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">

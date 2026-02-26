@@ -225,6 +225,13 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     }
   }, [activeTool, strokeColor]);
 
+  const setCanvasBackground = useCallback((color: string) => {
+    if (canvasRef.current) {
+      canvasRef.current.set({ backgroundColor: color });
+      canvasRef.current.renderAll();
+    }
+  }, []);
+
   const loadImage = useCallback(async (url: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -240,8 +247,10 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
         top: (canvas.height! - fabricImage.height! * scale) / 2,
       });
       canvas.clear();
-      canvas.backgroundColor = "#0d0f14";
+      // Keep background color when loading new image
+      const bgColor = canvas.backgroundColor;
       canvas.add(fabricImage);
+      canvas.set({ backgroundColor: bgColor });
       canvas.renderAll();
       setHasImage(true);
     } catch (e) {
@@ -296,6 +305,6 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     canvasRef, activeTool, setActiveTool, comments,
     loadImage, loadImageFromFile, exportPNG, exportPDF,
     deleteSelected, updateComment, hasImage,
-    strokeColor, setStrokeColor,
+    strokeColor, setStrokeColor, setCanvasBackground,
   };
 }

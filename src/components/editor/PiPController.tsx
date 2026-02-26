@@ -11,6 +11,7 @@ interface Props {
     onDelete: () => void;
     strokeColor: string;
     onColorChange: (color: string) => void;
+    theme: Theme;
 }
 
 const colors = [
@@ -29,6 +30,8 @@ const annotationTools: { id: ToolType; icon: any; label: string }[] = [
     { id: "comment", icon: MessageCircle, label: "Comment Pin (C)" },
 ];
 
+import { Theme } from "@/hooks/useTheme";
+
 /**
  * Minimized PiP Controller - Annotation Tools Only.
  * Designed to look like the main bottom toolbar.
@@ -37,7 +40,16 @@ export function PiPController({
     pipWindow,
     activeTool, onToolChange, onDelete,
     strokeColor, onColorChange,
+    theme,
 }: Props) {
+    // Resolve theme
+    const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+    const bg = isDark ? "hsl(228 14% 8%)" : "#ffffff";
+    const border = isDark ? "1px solid hsla(228, 14%, 20%, 0.4)" : "1px solid rgba(0,0,0,0.1)";
+    const textColor = isDark ? "hsl(220 10% 60%)" : "#64748b";
+    const activeText = isDark ? "hsl(228 14% 7%)" : "#ffffff";
+
     return createPortal(
         <div
             style={{
@@ -49,11 +61,12 @@ export function PiPController({
                 width: "100%",
                 height: "100%",
                 padding: "6px 10px",
-                background: "hsl(228 14% 8%)",
+                background: bg,
                 fontFamily: "'Inter', system-ui, sans-serif",
                 boxSizing: "border-box",
-                border: "1px solid hsla(228, 14%, 20%, 0.4)",
+                border: border,
                 borderRadius: "12px",
+                boxShadow: isDark ? "none" : "0 4px 12px rgba(0,0,0,0.05)",
             }}
         >
             {/* Color Selection Row (Minimal) */}
@@ -86,7 +99,7 @@ export function PiPController({
                             padding: "8px",
                             borderRadius: "10px",
                             background: activeTool === id ? "hsl(190 100% 50%)" : "transparent",
-                            color: activeTool === id ? "hsl(228 14% 7%)" : "hsl(220 10% 60%)",
+                            color: activeTool === id ? activeText : textColor,
                             border: "none",
                             cursor: "pointer",
                             display: "flex",
@@ -97,14 +110,14 @@ export function PiPController({
                         }}
                         onMouseEnter={(e) => {
                             if (activeTool !== id) {
-                                e.currentTarget.style.background = "hsla(228, 14%, 20%, 0.4)";
-                                e.currentTarget.style.color = "hsl(220 20% 90%)";
+                                e.currentTarget.style.background = isDark ? "hsla(228, 14%, 20%, 0.4)" : "rgba(0,0,0,0.05)";
+                                e.currentTarget.style.color = isDark ? "hsl(220 20% 90%)" : "#1e293b";
                             }
                         }}
                         onMouseLeave={(e) => {
                             if (activeTool !== id) {
                                 e.currentTarget.style.background = "transparent";
-                                e.currentTarget.style.color = "hsl(220 10% 60%)";
+                                e.currentTarget.style.color = textColor;
                             }
                         }}
                     >
@@ -113,7 +126,7 @@ export function PiPController({
                 ))}
 
                 {/* Divider */}
-                <div style={{ width: "1px", height: "24px", background: "hsla(228, 14%, 30%, 0.3)", margin: "0 6px" }} />
+                <div style={{ width: "1px", height: "24px", background: isDark ? "hsla(228, 14%, 30%, 0.3)" : "rgba(0,0,0,0.08)", margin: "0 6px" }} />
 
                 {/* Delete Action */}
                 <button
