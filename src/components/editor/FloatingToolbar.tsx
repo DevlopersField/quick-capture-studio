@@ -25,6 +25,7 @@ interface Props {
   onUpload: () => void;
   onMockCapture: () => void;
   onExport: () => void;
+  hasPiP?: boolean;
 }
 
 const tools: { id: ToolType; icon: React.ElementType; label: string }[] = [
@@ -42,50 +43,68 @@ export function FloatingToolbar({
   onRecordStart, onRecordStop, onRecordPause, onRecordResume,
   onRecordToggleMute, formatTime,
   onUpload, onMockCapture, onExport,
+  hasPiP = false,
 }: Props) {
+  const isRecording = recorderState === "recording" || recorderState === "paused";
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 px-4 pointer-events-none animate-slide-up">
       <div className="glass-panel rounded-2xl px-3 py-2.5 flex items-center gap-1 shadow-2xl shadow-black/40 pointer-events-auto max-w-fit">
 
         {/* === Annotation Tools (Left) === */}
-        <div className="flex items-center gap-0.5">
-          {tools.map(({ id, icon: Icon, label }) => (
-            <button
-              key={id}
-              onClick={() => onToolChange(id)}
-              title={label}
-              className={`p-2.5 rounded-xl transition-all duration-200 ${activeTool === id
+        {!hasPiP ? (
+          <div className="flex items-center gap-0.5 animate-fade-in">
+            {tools.map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                onClick={() => onToolChange(id)}
+                title={label}
+                className={`p-2.5 rounded-xl transition-all duration-200 ${activeTool === id
                   ? "bg-primary text-primary-foreground glow-cyan-sm scale-105"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface-hover"
-                }`}
+                  }`}
+              >
+                <Icon size={18} />
+              </button>
+            ))}
+            <button
+              onClick={onDelete}
+              title="Delete Selected (Del)"
+              className="p-2.5 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
             >
-              <Icon size={18} />
+              <Trash2 size={18} />
             </button>
-          ))}
-          <button
-            onClick={onDelete}
-            title="Delete Selected (Del)"
-            className="p-2.5 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
-          >
-            <Trash2 size={18} />
-          </button>
-        </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground animate-fade-in">
+            Mini tools active in floating window
+          </div>
+        )}
 
         {/* Divider */}
         <div className="w-px h-8 bg-border/50 mx-2" />
 
         {/* === Recording Controls (Center) === */}
-        <RecordingController
-          state={recorderState}
-          elapsed={recorderElapsed}
-          isMuted={recorderIsMuted}
-          onStart={onRecordStart}
-          onStop={onRecordStop}
-          onPause={onRecordPause}
-          onResume={onRecordResume}
-          onToggleMute={onRecordToggleMute}
-          formatTime={formatTime}
-        />
+        {isRecording && hasPiP ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 animate-fade-in">
+            <span className="recording-dot" />
+            <span className="text-xs font-mono text-foreground/70 tabular-nums">
+              {formatTime(recorderElapsed)}
+            </span>
+          </div>
+        ) : (
+          <RecordingController
+            state={recorderState}
+            elapsed={recorderElapsed}
+            isMuted={recorderIsMuted}
+            onStart={onRecordStart}
+            onStop={onRecordStop}
+            onPause={onRecordPause}
+            onResume={onRecordResume}
+            onToggleMute={onRecordToggleMute}
+            formatTime={formatTime}
+          />
+        )}
 
         {/* Divider */}
         <div className="w-px h-8 bg-border/50 mx-2" />

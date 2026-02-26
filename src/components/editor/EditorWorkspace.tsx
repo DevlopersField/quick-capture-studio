@@ -1,10 +1,12 @@
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import { Camera, MessageCircle } from "lucide-react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useRecorder } from "@/hooks/useRecorder";
+import { usePictureInPicture } from "@/hooks/usePictureInPicture";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { CommentPanel } from "./CommentPanel";
 import { ExportModal } from "./ExportModal";
+import { PiPController } from "./PiPController";
 
 // Demo image for mock capture
 const MOCK_IMAGE = "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&q=80";
@@ -22,6 +24,7 @@ export function EditorWorkspace() {
   } = useCanvas(containerRef);
 
   const recorder = useRecorder();
+  const { pipWindow, openPiP, closePiP } = usePictureInPicture();
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -36,6 +39,30 @@ export function EditorWorkspace() {
     }
   }, [setActiveTool]);
 
+  // Handle recording stop — close PiP controller
+  const handleRecordStop = useCallback(() => {
+    recorder.stopRecording();
+    closePiP();
+  }, [recorder.stopRecording, closePiP]);
+
+  // Open PiP when recording starts, close when it ends
+  useEffect(() => {
+    if (recorder.state === "recording" && !pipWindow) {
+      openPiP(320, 56);
+    } else if (recorder.state === "finished" || recorder.state === "idle") {
+      closePiP();
+    }
+  }, [recorder.state, pipWindow, openPiP, closePiP]);
+
+  // Auto-open Export Modal when recording finishes
+  useEffect(() => {
+    if (recorder.state === "finished" && recorder.videoUrl) {
+      setShowExport(true);
+    }
+  }, [recorder.state, recorder.videoUrl]);
+
+  const isRecording = recorder.state === "recording" || recorder.state === "paused";
+
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden relative">
       {/* Floating Logo Badge (top-left) */}
@@ -44,6 +71,14 @@ export function EditorWorkspace() {
           <Camera size={14} className="text-primary-foreground" />
         </div>
         <span className="text-sm font-semibold text-foreground tracking-tight">1ClickCapture</span>
+        {isRecording && (
+          <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-border/40">
+            <span className="recording-dot" />
+            <span className="text-xs font-mono text-muted-foreground">
+              {recorder.formatTime(recorder.elapsed)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Comment Panel Toggle (top-right) */}
@@ -99,7 +134,7 @@ export function EditorWorkspace() {
         recorderElapsed={recorder.elapsed}
         recorderIsMuted={recorder.isMuted}
         onRecordStart={recorder.startRecording}
-        onRecordStop={recorder.stopRecording}
+        onRecordStop={handleRecordStop}
         onRecordPause={recorder.pauseRecording}
         onRecordResume={recorder.resumeRecording}
         onRecordToggleMute={recorder.toggleMute}
@@ -107,7 +142,18 @@ export function EditorWorkspace() {
         onUpload={() => fileInputRef.current?.click()}
         onMockCapture={() => loadImage(MOCK_IMAGE)}
         onExport={() => setShowExport(true)}
+        hasPiP={!!pipWindow}
       />
+
+      {/* PiP Controller (rendered in separate window) */}
+      {pipWindow && (
+        <PiPController
+          pipWindow={pipWindow}
+          activeTool={activeTool}
+          onToolChange={handleToolChange}
+          onDelete={deleteSelected}
+        />
+      )}
 
       {/* Hidden File Input */}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
