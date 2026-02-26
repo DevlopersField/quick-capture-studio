@@ -1,73 +1,62 @@
-# Welcome to your Lovable project
+# 1ClickCapture - Quick Capture Studio
 
-## Project info
+1ClickCapture is a powerful, web-based tool designed for instant screen capturing, live recording, and real-time annotation. Whether you need to highlight a bug, create a tutorial, or provide feedback on a design, 1ClickCapture simplifies the process with a seamless, high-performance interface.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## ✨ Key Features
 
-## How can I edit this code?
+- **Live Screen Recording**: Record your entire screen or specific windows with optional microphone audio.
+- **Real-time Annotations**: Draw shapes, add arrows, write text, and drop comment pins directly on your captures.
+- **Picture-in-Picture (PiP) Mode**: A sticky floating toolbar that stays with you even when you switch tabs, allowing for live annotation during recordings.
+- **Multiple Export Options**: Save your work as high-quality PNG images, PDF documents, or WebM video files.
+- **Dark Mode Support**: A sleek, glassmorphic UI that adapts to your system preferences.
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## 🚀 How to Use
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 1. Annotating an Image
+- **Upload**: Click the **Upload** icon in the toolbar to import any image.
+- **Annotate**: Use the tools (Rectangle, Arrow, Pencil, Text, Comment) to mark up the image.
+- **Customize**: Change the stroke color using the color picker on the left of the toolbar.
+- **Export**: Click **Export** to save as PNG, PDF, or copy directly to your clipboard.
 
-Changes made via Lovable will be committed automatically to this repo.
+### 2. Screen Recording
+- **Start**: Click the **Record** button. Choose the screen or window you wish to capture.
+- **Control**: Use the floating controls to **Pause**, **Resume**, or **Mute** your microphone.
+- **Finish**: Click **Stop** to automatically open the export modal where you can preview and download your video.
 
-**Use your preferred IDE**
+### 🎯 Pro Tip: Capture & Record Simultaneously
+You can record your screen and annotate live at the same time using the **Sticky PiP Toolbar**:
+1. Start a **Screen Recording**.
+2. A small floating **Picture-in-Picture (PiP)** window will appear automatically.
+3. Switch to the tab or application you are recording.
+4. Use the annotation tools in the PiP window to draw on your "canvas" (the screen being recorded).
+5. Your live annotations will be captured as part of the video recording!
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## ⌨️ Keyboard Shortcuts
 
-Follow these steps:
+Speed up your workflow with these essential shortcuts:
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+| Shortcut | Action |
+| :--- | :--- |
+| `V` | Select / Pointer Tool |
+| `R` | Rectangle Tool |
+| `A` | Arrow Tool |
+| `P` | Pencil / Draw Tool |
+| `T` | Text Tool |
+| `C` | Comment Pin Tool |
+| `Ctrl + Z` | Undo |
+| `Ctrl + Y` | Redo |
+| `Del` / `Backspace` | Delete Selected Object |
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🛠️ Built With
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- **React & TypeScript**: For a robust and type-safe application logic.
+- **Fabric.js**: Powering the high-performance canvas annotation engine.
+- **Lucide React**: Beautiful and consistent iconography.
+- **Tailwind CSS**: Modern, responsive, and glassmorphic UI design.
+- **Framer Motion**: Smooth animations and transitions.
