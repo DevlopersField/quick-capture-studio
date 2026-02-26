@@ -7,9 +7,10 @@
 ## 💎 Premium Features
 
 ### 🎥 Advanced Screen Recording
-- **Universal Toolbar**: A sleek, glassmorphic toolbar that follows you across every tab and window during your recording.
-- **Cross-Window Sync**: Annotation tools (Pencil, Arrow, Text, Shapes) and colors stay synced instantly across all open browser windows.
+- **Draggable Universal Toolbar**: A sleek, glassmorphic toolbar that you can drag to any position. It follows you across every tab during recording.
+- **Cross-Window Sync**: Annotation tools (Pencil, Arrow, Text, Rect) and colors stay synced instantly across all open browser windows in real-time.
 - **Dual Stop Functionality**: Effortlessly stop recordings via our custom toolbar or the browser's native "Stop sharing" button.
+- **Export Priority**: Video recordings are prioritized in the export menu, allowing for one-click "Save Video" flows.
 - **Loom-Style Workflow**: On stop, you are instantly redirected to the Studio with an auto-popup ready for preview, download, or sharing.
 
 ### 📸 Pro Full-Page Capture

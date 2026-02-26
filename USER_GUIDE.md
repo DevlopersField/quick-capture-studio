@@ -1,64 +1,53 @@
 # 🌟 Welcome to 1ClickCapture!
 
-Hey there! Thanks for choosing **1ClickCapture**. We've built this tool to make sharing your ideas, bugs, and designs as easy as a single click. Whether you're recording a quick video for a teammate or capturing a beautiful long website, we've got you covered.
-
-Here’s a quick guide to help you get started!
+Hey there! Thanks for choosing **1ClickCapture**. We've built this tool to make your visual communication fast, fun, and professional. Whether you're recording a quick bug report or designing a presentation, here’s how to get the most out of your new studio.
 
 ---
 
-## 🎥 Recording Your First Video
+## 🎥 Step 1: Record Your Screen Like a Pro
 
-Recording a video is super smooth. Here’s how to do it:
+Recording a video is as easy as clicking the extension icon.
 
-1.  **Open the Extension**: Click the 1ClickCapture icon in your browser.
-2.  **Hit "Video & Loom Record"**: A beautiful red "Ready to Record?" screen will pop up.
-3.  **Select Your Screen**: Click **Start Recording** and choose which screen or window you want to capture.
-4.  **Draw as You Talk**: A toolbar will appear at the bottom. Use the **Pencil**, **Arrow**, or **Text** tools to highlight things as you record. 
-    > **Tip:** You can switch tabs! The toolbar will follow you wherever you go.
-5.  **Finish Strong**: When you're done, click the red **Stop** button on the toolbar (or the browser's "Stop sharing" button). 
-6.  **Preview & Save**: You’ll be whisked away to the Studio where your video will be waiting for you to watch or download.
+1.  **Start Recording**: Click the extension and choose "Record Screen".
+2.  **Move the Toolbar**: Don't like where the toolbar is? Just click on the **Timer / Red Dot area** and drag it anywhere you want!
+3.  **Draw as You Talk**: Grab the **Pencil**, **Arrow**, or **Rectangle** tool to highlight things in real-time. Want to leave a note? Use the **Text Tool**.
+4.  **Magic Sync**: If you open a new tab while recording, your drawing tools and annotations will follow you automatically. It's like one giant canvas over your whole browser!
+5.  **Finish Up**: Click the big red **"Stop"** button. You'll be whisked away to the Studio instantly.
 
 ---
 
-## 📸 Capturing a Website
+## 📸 Step 2: Capture the Whole Page
 
-Need a screenshot? You have two great options:
+Need to grab a long landing page? Our engine handles the heavy lifting.
 
-### 1. Capture Full Page
-This is our favorite. It scrolls the entire page for you and stitches it into one perfect, high-resolution image.
-- Perfect for landing pages, long articles, or design reviews.
-
-### 2. Selected Area
-Just want a snippet? Click and drag over the part of the screen you want to save.
+1.  **One Click**: Select "Full Page Capture".
+2.  **Hands Off**: Sit back for a few seconds while the extension scrolls and stitches the page. We even handle sticky headers and footers so they don't overlap!
+3.  **Perfect Stitching**: Your capture will open in the Studio, looking exactly like the real website.
 
 ---
 
-## 🎨 Professional Editing in the Studio
+## 🎨 Step 3: Polish in the Studio
 
-Once you have a capture, the **Studio** is where the magic happens. It works just like your favorite design tools (like Figma):
+The Studio is where your ideas come to life. It feels like your favorite design tools (like Figma), but simpler.
 
-- **Move Around**: Hold the **Spacebar** and drag your mouse to pan around your canvas.
-- **Zoom In**: Use your mouse wheel (or pinch on your trackpad) to zoom into the details.
-- **Type Anything**: Click the **Text** tool, tap anywhere, and start typing. 
-- **Light or Dark?**: Use the Sun/Moon icon in the top right to switch themes instantly.
-- **Save it Your Way**: Export your final masterpiece as a **PNG**, **PDF**, or just copy it to your clipboard.
-
----
-
-## ⌨️ Quick Shortcuts for Power Users
-
-| Key | What it does |
-| :--- | :--- |
-| `Space + Drag` | Pan / Move around |
-| `P` | Grab the **Pencil** |
-| `A` | Draw an **Arrow** |
-| `T` | Add some **Text** |
-| `Ctrl + Z` | Oops! Undo the last thing |
-| `Del` | Remove the selected item |
+-   **Movement**: Use **Space + Drag** to pan around your canvas.
+-   **Zooming**: Use your **Mouse Wheel** (or pinch) to zoom in and out.
+-   **Add Images**: Want to add a logo or another screenshot? Click **"Add Image"** in the top bar.
+-   **Theme Check**: Switch between **Light** and **Dark** modes to see how your designs look in different environments.
 
 ---
 
-### 💡 Need Help?
-Everything should be intuitive, but if you ever get stuck, just try clicking around—the Studio is designed to be a "safe space" where you can play with your annotations until they're perfect.
+## 💾 Step 4: Export & Share
 
-**Happy Capturing!** 🚀✨
+When you're ready, click the **Export** button in the top right.
+
+-   **Videos**: If you just finished a recording, **"Save Video"** will be right at the top for you.
+-   **Images**: Download a high-quality **PNG** or a clean **PDF**.
+-   **Instant Share**: Click **"Copy to Clipboard"** to paste your capture directly into Slack, Discord, or an email.
+
+---
+
+### 🔥 Pro Tip:
+Hold the **Space** bar while you're in the Studio to quickly move around without switching tools. It's the fastest way to navigate!
+
+**Happy Capturing!** 🚀

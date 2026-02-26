@@ -29,6 +29,11 @@ export function ExportModal({
 
   const options = [
     {
+      icon: Video, label: "Save Video", desc: videoUrl ? "Download recording" : "Record a session first",
+      onClick: onDownloadVideo, available: !!videoUrl,
+      gradient: "from-red-500/10 to-orange-500/10",
+    },
+    {
       icon: Image, label: "Download PNG", desc: "Flattened canvas image",
       onClick: onExportPNG, available: true,
       gradient: "from-cyan-500/10 to-blue-500/10",
@@ -44,11 +49,6 @@ export function ExportModal({
       icon: FileText, label: "Download PDF", desc: "Export as PDF document",
       onClick: onExportPDF, available: true,
       gradient: "from-purple-500/10 to-pink-500/10",
-    },
-    {
-      icon: Video, label: "Save Video", desc: videoUrl ? "Download recording" : "Record a session first",
-      onClick: onDownloadVideo, available: !!videoUrl,
-      gradient: "from-red-500/10 to-orange-500/10",
     },
   ];
 

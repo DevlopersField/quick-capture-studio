@@ -18,6 +18,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === "setDrawingTool") {
+        // Persist state for new/reloaded tabs
+        chrome.storage.local.set({ 
+            currentTool: request.tool, 
+            currentColor: request.color || '#00d4ff' 
+        });
+
         // Forward tool change to all non-extension tabs
         chrome.tabs.query({}, (tabs) => {
             tabs.forEach(tab => {
@@ -37,6 +43,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             tabs.forEach(tab => {
                 if (tab.id && !tab.url?.startsWith("chrome-extension://")) {
                     chrome.tabs.sendMessage(tab.id, { action: "clearDrawingCanvas" }).catch(() => {});
+                }
+            });
+        });
+    }
+
+    if (request.action === "syncDrawing") {
+        chrome.tabs.query({}, (tabs) => {
+            tabs.forEach(tab => {
+                if (tab.id && tab.id !== sender.tab?.id && !tab.url?.startsWith("chrome-extension://")) {
+                    chrome.tabs.sendMessage(tab.id, { 
+                        action: "syncDrawing", 
+                        drawingData: request.drawingData,
+                        currentColor: request.currentColor
+                    }).catch(() => {});
+                }
+            });
+        });
+    }
+
+    if (request.action === "syncRecordingStart") {
+        chrome.tabs.query({}, (tabs) => {
+            tabs.forEach(tab => {
+                if (tab.id) {
+                    chrome.tabs.sendMessage(tab.id, { action: "syncRecordingStart" }).catch(() => {});
                 }
             });
         });

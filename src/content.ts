@@ -261,94 +261,95 @@ let recordedChunks: Blob[] = [];
 let recordingTimerInterval: any = null;
 let currentStream: MediaStream | null = null;
 let drawingCanvas: HTMLCanvasElement | null = null;
-let currentTool: 'pencil' | 'arrow' | 'rect' | 'none' = 'none';
+let currentTool: 'pencil' | 'arrow' | 'rect' | 'text' | 'none' = 'none';
+
+// Global Drawing State
+let isDrawing = false;
+let drawingStartX = 0;
+let drawingStartY = 0;
+let drawingData: { tool: string; x1: number; y1: number; x2?: number; y2?: number; color: string; text?: string }[] = [];
+let currentColor = '#00d4ff';
+
+const pageX = (e: MouseEvent) => e.clientX + window.scrollX;
+const pageY = (e: MouseEvent) => e.clientY + window.scrollY;
+
+function drawLine(x1: number, y1: number, x2: number, y2: number) {
+    const ctx = drawingCanvas?.getContext('2d');
+    if (!ctx) return;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.strokeStyle = currentColor; ctx.lineWidth = 4; ctx.stroke();
+}
+
+function drawArrow(x1: number, y1: number, x2: number, y2: number) {
+    const ctx = drawingCanvas?.getContext('2d');
+    if (!ctx) return;
+    const headlen = 12;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.strokeStyle = currentColor; ctx.lineWidth = 4; ctx.stroke();
+}
+
+function drawRect(x1: number, y1: number, x2: number, y2: number) {
+    const ctx = drawingCanvas?.getContext('2d');
+    if (!ctx) return;
+    ctx.strokeStyle = currentColor; ctx.lineWidth = 4;
+    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+}
+
+function drawText(text: string, x: number, y: number, color: string) {
+    const ctx = drawingCanvas?.getContext('2d');
+    if (!ctx) return;
+    ctx.font = 'bold 20px "Outfit", "Inter", sans-serif';
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+}
+
+function redrawAll() {
+    const ctx = drawingCanvas?.getContext('2d');
+    if (!ctx || !drawingCanvas) return;
+    ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+    drawingData.forEach(d => {
+        const prevColor = currentColor;
+        currentColor = d.color || '#00d4ff';
+        if (d.tool === 'arrow' && d.x2 !== undefined && d.y2 !== undefined) drawArrow(d.x1, d.y1, d.x2, d.y2);
+        else if (d.tool === 'rect' && d.x2 !== undefined && d.y2 !== undefined) drawRect(d.x1, d.y1, d.x2, d.y2);
+        else if (d.tool === 'pencil-seg' && d.x2 !== undefined && d.y2 !== undefined) drawLine(d.x1, d.y1, d.x2, d.y2);
+        else if (d.tool === 'text' && d.text) drawText(d.text, d.x1, d.y1, currentColor);
+        currentColor = prevColor;
+    });
+}
+
+function updateSize() {
+    if (!drawingCanvas) return;
+    const docW = document.documentElement.clientWidth;
+    const docH = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, window.innerHeight);
+    
+    if (drawingCanvas.width !== docW || drawingCanvas.height !== docH) {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = drawingCanvas.width;
+        tempCanvas.height = drawingCanvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx?.drawImage(drawingCanvas, 0, 0);
+        
+        drawingCanvas.width = docW;
+        drawingCanvas.height = docH;
+        
+        const ctx = drawingCanvas.getContext('2d');
+        if (ctx) {
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.drawImage(tempCanvas, 0, 0);
+            redrawAll();
+        }
+    }
+}
 
 function initDrawingCanvas() {
     if (drawingCanvas) return;
     
-    let isDrawing = false;
-    let startX = 0;
-    let startY = 0;
-    let drawingData: { tool: string; x1: number; y1: number; x2?: number; y2?: number; color: string; text?: string }[] = [];
-    let currentColor = '#00d4ff';
-
-    const pageX = (e: MouseEvent) => e.clientX + window.scrollX;
-    const pageY = (e: MouseEvent) => e.clientY + window.scrollY;
-
-    function drawLine(x1: number, y1: number, x2: number, y2: number) {
-        const ctx = drawingCanvas?.getContext('2d');
-        if (!ctx) return;
-        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-        ctx.strokeStyle = currentColor; ctx.lineWidth = 4; ctx.stroke();
-    }
-
-    function drawArrow(x1: number, y1: number, x2: number, y2: number) {
-        const ctx = drawingCanvas?.getContext('2d');
-        if (!ctx) return;
-        const headlen = 12;
-        const angle = Math.atan2(y2 - y1, x2 - x1);
-        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-        ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
-        ctx.moveTo(x2, y2);
-        ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
-        ctx.strokeStyle = currentColor; ctx.lineWidth = 4; ctx.stroke();
-    }
-
-    function drawRect(x1: number, y1: number, x2: number, y2: number) {
-        const ctx = drawingCanvas?.getContext('2d');
-        if (!ctx) return;
-        ctx.strokeStyle = currentColor; ctx.lineWidth = 4;
-        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-    }
-
-    function drawText(text: string, x: number, y: number, color: string) {
-        const ctx = drawingCanvas?.getContext('2d');
-        if (!ctx) return;
-        ctx.font = 'bold 20px "Outfit", "Inter", sans-serif';
-        ctx.fillStyle = color;
-        ctx.fillText(text, x, y);
-    }
-
-    function redrawAll() {
-        const ctx = drawingCanvas?.getContext('2d');
-        if (!ctx || !drawingCanvas) return;
-        ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-        drawingData.forEach(d => {
-            const prevColor = currentColor;
-            currentColor = d.color || '#00d4ff';
-            if (d.tool === 'arrow' && d.x2 !== undefined && d.y2 !== undefined) drawArrow(d.x1, d.y1, d.x2, d.y2);
-            else if (d.tool === 'rect' && d.x2 !== undefined && d.y2 !== undefined) drawRect(d.x1, d.y1, d.x2, d.y2);
-            else if (d.tool === 'pencil-seg' && d.x2 !== undefined && d.y2 !== undefined) drawLine(d.x1, d.y1, d.x2, d.y2);
-            else if (d.tool === 'text' && d.text) drawText(d.text, d.x1, d.y1, currentColor);
-            currentColor = prevColor;
-        });
-    }
-
-    function updateSize() {
-        if (!drawingCanvas) return;
-        const docW = document.documentElement.clientWidth;
-        const docH = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, window.innerHeight);
-        
-        if (drawingCanvas.width !== docW || drawingCanvas.height !== docH) {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = drawingCanvas.width;
-            tempCanvas.height = drawingCanvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx?.drawImage(drawingCanvas, 0, 0);
-            
-            drawingCanvas.width = docW;
-            drawingCanvas.height = docH;
-            
-            const ctx = drawingCanvas.getContext('2d');
-            if (ctx) {
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.drawImage(tempCanvas, 0, 0);
-                redrawAll();
-            }
-        }
-    }
-
     drawingCanvas = document.createElement('canvas');
     drawingCanvas.id = 'oneclick-drawing-canvas';
     updateSize();
@@ -366,8 +367,6 @@ function initDrawingCanvas() {
 
     window.addEventListener('mousedown', (e) => {
         if (currentTool === 'none') return;
-        
-        // Ignore clicks on our own UI
         const target = e.target as HTMLElement;
         if (target.closest('#oneclick-recorder-widget') || target.tagName === 'INPUT') return;
         
@@ -385,8 +384,9 @@ function initDrawingCanvas() {
                 if (input.value.trim()) {
                     drawingData.push({ tool: 'text', text: input.value, x1: x, y1: y, color: currentColor });
                     redrawAll();
+                    chrome.runtime.sendMessage({ action: "syncDrawing", drawingData, currentColor });
                 }
-                document.body.removeChild(input);
+                if (document.body.contains(input)) document.body.removeChild(input);
             };
 
             input.onkeydown = (ev) => { if (ev.key === 'Enter') finishText(); };
@@ -394,7 +394,7 @@ function initDrawingCanvas() {
             return;
         }
 
-        isDrawing = true; startX = x; startY = y;
+        isDrawing = true; drawingStartX = x; drawingStartY = y;
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -403,16 +403,21 @@ function initDrawingCanvas() {
         const curY = pageY(e);
         
         if (currentTool === 'pencil') {
-            drawLine(startX, startY, curX, curY);
-            drawingData.push({ tool: 'pencil-seg', x1: startX, y1: startY, x2: curX, y2: curY, color: currentColor });
-            startX = curX; startY = curY;
+            drawLine(drawingStartX, drawingStartY, curX, curY);
+            drawingData.push({ tool: 'pencil-seg', x1: drawingStartX, y1: drawingStartY, x2: curX, y2: curY, color: currentColor });
+            drawingStartX = curX; drawingStartY = curY;
+            
+            // Real-time sync for pencil (throttled by the nature of mousemove events)
+            if (drawingData.length % 5 === 0) {
+                chrome.runtime.sendMessage({ action: "syncDrawing", drawingData, currentColor });
+            }
         } else {
             const ctx = drawingCanvas?.getContext('2d');
             if (ctx) {
                 ctx.clearRect(0, 0, drawingCanvas!.width, drawingCanvas!.height);
                 redrawAll();
-                if (currentTool === 'arrow') drawArrow(startX, startY, curX, curY);
-                else if (currentTool === 'rect') drawRect(startX, startY, curX, curY);
+                if (currentTool === 'arrow') drawArrow(drawingStartX, drawingStartY, curX, curY);
+                else if (currentTool === 'rect') drawRect(drawingStartX, drawingStartY, curX, curY);
             }
         }
     });
@@ -421,17 +426,34 @@ function initDrawingCanvas() {
         if (!isDrawing || currentTool === 'none' || currentTool === 'text') return;
         isDrawing = false;
         if (currentTool !== 'pencil') {
-            drawingData.push({ tool: currentTool, x1: startX, y1: startY, x2: pageX(e), y2: pageY(e), color: currentColor });
+            drawingData.push({ tool: currentTool as string, x1: drawingStartX, y1: drawingStartY, x2: pageX(e), y2: pageY(e), color: currentColor });
         }
+        chrome.runtime.sendMessage({ action: "syncDrawing", drawingData, currentColor });
+        redrawAll();
     });
 
     (drawingCanvas as any).clear = () => { 
         drawingData = []; 
-        const ctx = drawingCanvas?.getContext('2d');
-        if (ctx) ctx.clearRect(0, 0, drawingCanvas!.width, drawingCanvas!.height); 
+        redrawAll();
     };
     (drawingCanvas as any).setColor = (c: string) => { currentColor = c; };
 }
+
+const updateToolUI = () => {
+    if (drawingCanvas) {
+        drawingCanvas.style.pointerEvents = currentTool !== 'none' ? 'auto' : 'none';
+    }
+    if (!recorderWidget) return;
+    recorderWidget.querySelectorAll('.oneclick-tool').forEach(btn => (btn as HTMLElement).style.background = 'none');
+    if (currentTool !== 'none') {
+        const activeBtn = document.getElementById(`oneclick-tool-${currentTool}`);
+        if (activeBtn) activeBtn.style.background = 'rgba(0,212,255,0.2)';
+    }
+};
+
+const broadcastTool = (tool: string) => {
+    chrome.runtime.sendMessage({ action: "setDrawingTool", tool, color: currentColor });
+};
 
 function createRecordingController() {
     if (recorderWidget) return;
@@ -449,7 +471,7 @@ function createRecordingController() {
     `;
 
     recorderWidget.innerHTML = `
-        <div style="display: flex; items-center; gap: 10px; padding-right: 12px; border-right: 1px solid rgba(255,255,255,0.1);">
+        <div style="display: flex; align-items: center; gap: 10px; padding-right: 12px; border-right: 1px solid rgba(255,255,255,0.1); cursor: move;" id="oneclick-drag-handle">
             <div id="oneclick-record-status" style="width: 10px; height: 10px; background: #ff4444; border-radius: 50%; animation: pulse 1s infinite;"></div>
             <span id="oneclick-timer" style="font-size: 14px; font-weight: 600; min-width: 40px;">00:00</span>
         </div>
@@ -480,22 +502,30 @@ function createRecordingController() {
         }
     }, 1000);
 
-    const updateToolUI = () => {
-        recorderWidget!.querySelectorAll('.oneclick-tool').forEach(btn => (btn as HTMLElement).style.background = 'none');
-        if (currentTool !== 'none') {
-            const activeBtn = document.getElementById(`oneclick-tool-${currentTool}`);
-            if (activeBtn) activeBtn.style.background = 'rgba(0,212,255,0.2)';
-            drawingCanvas!.style.pointerEvents = 'auto';
-        } else {
-            drawingCanvas!.style.pointerEvents = 'none';
-        }
-    };
-
-    document.getElementById('oneclick-tool-pencil')?.addEventListener('click', () => { currentTool = currentTool === 'pencil' ? 'none' : 'pencil'; updateToolUI(); });
-    document.getElementById('oneclick-tool-arrow')?.addEventListener('click', () => { currentTool = currentTool === 'arrow' ? 'none' : 'arrow'; updateToolUI(); });
-    document.getElementById('oneclick-tool-rect')?.addEventListener('click', () => { currentTool = currentTool === 'rect' ? 'none' : 'rect'; updateToolUI(); });
-    document.getElementById('oneclick-tool-text')?.addEventListener('click', () => { currentTool = currentTool === 'text' ? 'none' : 'text'; updateToolUI(); });
-    document.getElementById('oneclick-tool-clear')?.addEventListener('click', () => { (drawingCanvas as any).clear(); });
+    document.getElementById('oneclick-tool-pencil')?.addEventListener('click', () => { 
+        currentTool = currentTool === 'pencil' ? 'none' : 'pencil'; 
+        updateToolUI(); 
+        broadcastTool(currentTool === 'pencil' ? 'pencil' : 'select');
+    });
+    document.getElementById('oneclick-tool-arrow')?.addEventListener('click', () => { 
+        currentTool = currentTool === 'arrow' ? 'none' : 'arrow'; 
+        updateToolUI(); 
+        broadcastTool(currentTool === 'arrow' ? 'arrow' : 'select');
+    });
+    document.getElementById('oneclick-tool-rect')?.addEventListener('click', () => { 
+        currentTool = currentTool === 'rect' ? 'none' : 'rect'; 
+        updateToolUI(); 
+        broadcastTool(currentTool === 'rect' ? 'rectangle' : 'select');
+    });
+    document.getElementById('oneclick-tool-text')?.addEventListener('click', () => { 
+        currentTool = currentTool === 'text' ? 'none' : 'text'; 
+        updateToolUI(); 
+        broadcastTool(currentTool === 'text' ? 'text' : 'select');
+    });
+    document.getElementById('oneclick-tool-clear')?.addEventListener('click', () => { 
+        (drawingCanvas as any).clear(); 
+        chrome.runtime.sendMessage({ action: "clearDrawingCanvas" });
+    });
 
     const pauseBtn = document.getElementById('oneclick-pause');
     const pauseIcon = document.getElementById('oneclick-pause-icon');
@@ -520,6 +550,36 @@ function createRecordingController() {
     document.getElementById('oneclick-stop')?.addEventListener('click', () => {
         chrome.runtime.sendMessage({ action: "stopRecording" });
     });
+
+    // Draggable Logic
+    let isDraggingToolbar = false;
+    let offsetX = 0;
+    let offsetY = 0;
+    const dragHandle = document.getElementById('oneclick-drag-handle');
+
+    dragHandle?.addEventListener('mousedown', (e) => {
+        isDraggingToolbar = true;
+        offsetX = e.clientX - recorderWidget!.getBoundingClientRect().left;
+        offsetY = e.clientY - recorderWidget!.getBoundingClientRect().top;
+        recorderWidget!.style.transition = 'none';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDraggingToolbar || !recorderWidget) return;
+        recorderWidget.style.left = `${e.clientX - offsetX + recorderWidget.offsetWidth / 2}px`;
+        recorderWidget.style.top = `${e.clientY - offsetY + recorderWidget.offsetHeight / 2}px`;
+        recorderWidget.style.bottom = 'auto';
+        recorderWidget.style.transform = 'translateX(-50%)';
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isDraggingToolbar && recorderWidget) {
+            isDraggingToolbar = false;
+            recorderWidget.style.transition = 'all 0.2s';
+        }
+    });
+
+    updateToolUI();
 }
 
 function cleanupRecording() {
@@ -599,6 +659,7 @@ async function startRecording() {
                 };
 
                 mediaRecorder.start();
+                chrome.runtime.sendMessage({ action: "syncRecordingStart" });
                 createRecordingController();
                 resolve();
             } catch (err) {
@@ -635,12 +696,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             'pencil': 'pencil', 'arrow': 'arrow', 'rectangle': 'rect', 'text': 'text', 'select': 'none',
         };
         currentTool = toolMap[request.tool] || 'none';
+        if (request.color) currentColor = request.color;
         if (drawingCanvas) {
             drawingCanvas.style.pointerEvents = currentTool === 'none' ? 'none' : 'auto';
         }
+        updateToolUI();
     }
     else if (request.action === "clearDrawingCanvas") {
         if (drawingCanvas) (drawingCanvas as any).clear();
+    }
+    else if (request.action === "syncRecordingStart") {
+        chrome.storage.local.get(['isRecording', 'currentTool', 'currentColor'], (res) => {
+            if (res.isRecording && !recorderWidget) {
+                if (res.currentColor) currentColor = res.currentColor;
+                const toolMap: Record<string, typeof currentTool> = {
+                    'pencil': 'pencil', 'arrow': 'arrow', 'rectangle': 'rect', 'text': 'text', 'select': 'none',
+                };
+                currentTool = toolMap[res.currentTool] || 'none';
+                createRecordingController();
+                updateToolUI();
+            }
+        });
     }
     else if (request.action === "syncDrawing") {
         if (!drawingCanvas) initDrawingCanvas();
@@ -651,8 +727,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Auto-init if recording is active globally
-chrome.storage.local.get(['isRecording'], (res) => {
+chrome.storage.local.get(['isRecording', 'currentTool', 'currentColor'], (res) => {
     if (res.isRecording) {
+        if (res.currentColor) currentColor = res.currentColor;
+        const toolMap: Record<string, typeof currentTool> = {
+            'pencil': 'pencil', 'arrow': 'arrow', 'rectangle': 'rect', 'text': 'text', 'select': 'none',
+        };
+        currentTool = toolMap[res.currentTool] || 'none';
         createRecordingController();
+        updateToolUI();
     }
 });
