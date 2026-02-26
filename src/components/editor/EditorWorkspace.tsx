@@ -20,7 +20,7 @@ export function EditorWorkspace() {
     activeTool, setActiveTool, comments,
     loadImage, loadImageFromFile, exportPNG, exportPDF, copyToClipboard,
     undo, redo,
-    deleteSelected, updateComment, hasImage,
+    deleteSelected, updateComment, hasImage, hasSelection,
     strokeColor, setStrokeColor, setCanvasBackground,
   } = useCanvas(containerRef);
 
@@ -165,7 +165,6 @@ export function EditorWorkspace() {
         onDelete={deleteSelected}
         onUndo={undo}
         onRedo={redo}
-        onCopy={copyToClipboard}
         hasContent={hasContent}
         recorderState={recorder.state}
         recorderElapsed={recorder.elapsed}
@@ -181,6 +180,7 @@ export function EditorWorkspace() {
         hasPiP={!!pipWindow}
         strokeColor={strokeColor}
         onColorChange={setStrokeColor}
+        hasSelection={hasSelection}
       />
 
       {/* PiP Controller (rendered in separate window) */}
@@ -192,6 +192,7 @@ export function EditorWorkspace() {
           onDelete={deleteSelected}
           strokeColor={strokeColor}
           onColorChange={setStrokeColor}
+          hasSelection={hasSelection}
           theme={theme}
         />
       )}

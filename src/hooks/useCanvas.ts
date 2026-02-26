@@ -17,6 +17,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
   const [comments, setComments] = useState<CommentPin[]>([]);
   const commentCountRef = useRef(0);
   const [hasImage, setHasImage] = useState(false);
+  const [hasSelection, setHasSelection] = useState(false);
 
   // Undo/Redo History
   const historyRef = useRef<string[]>([]);
@@ -93,6 +94,14 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     canvas.on("object:added", saveHistory);
     canvas.on("object:modified", saveHistory);
     canvas.on("object:removed", saveHistory);
+
+    const updateSelection = () => {
+      setHasSelection(canvas.getActiveObjects().length > 0);
+    };
+
+    canvas.on("selection:created", updateSelection);
+    canvas.on("selection:updated", updateSelection);
+    canvas.on("selection:cleared", updateSelection);
 
     // Keyboard Shortcuts
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -463,7 +472,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     canvasRef, activeTool, setActiveTool, comments,
     loadImage, loadImageFromFile, exportPNG, exportPDF, copyToClipboard,
     undo, redo,
-    deleteSelected, updateComment, hasImage,
+    deleteSelected, updateComment, hasImage, hasSelection,
     strokeColor, setStrokeColor, setCanvasBackground,
   };
 }

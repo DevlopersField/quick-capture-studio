@@ -1,4 +1,5 @@
-import { X, Image, FileText, Video, Clipboard } from "lucide-react";
+import { useState } from "react";
+import { X, Image, FileText, Video, Clipboard, Check } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -13,18 +14,31 @@ interface Props {
 export function ExportModal({
   open, onClose, onExportPNG, onExportPDF, onCopyImage, videoUrl, onDownloadVideo,
 }: Props) {
+  const [isCopied, setIsCopied] = useState(false);
+
   if (!open) return null;
 
+  const handleCopy = async () => {
+    await onCopyImage();
+    setIsCopied(true);
+    setTimeout(() => {
+      setIsCopied(false);
+      onClose();
+    }, 1000);
+  };
+
   const options = [
-    {
-      icon: Clipboard, label: "Copy to Clipboard", desc: "Copy image for instant sharing",
-      onClick: onCopyImage, available: true,
-      gradient: "from-green-500/10 to-emerald-500/10",
-    },
     {
       icon: Image, label: "Download PNG", desc: "Flattened canvas image",
       onClick: onExportPNG, available: true,
       gradient: "from-cyan-500/10 to-blue-500/10",
+    },
+    {
+      icon: isCopied ? Check : Clipboard,
+      label: isCopied ? "Copied!" : "Copy to Clipboard as PNG",
+      desc: isCopied ? "Added to system clipboard" : "Copy image for instant sharing",
+      onClick: handleCopy, available: true,
+      gradient: "from-green-500/10 to-emerald-500/10",
     },
     {
       icon: FileText, label: "Download PDF", desc: "Export as PDF document",
@@ -41,10 +55,10 @@ export function ExportModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]" onClick={onClose}>
       <div
-        className="glass-panel rounded-2xl w-full max-w-sm p-6 shadow-[0_20px_50px_rgba(0,0,0,0.2)] animate-fade-in"
+        className="glass-panel rounded-2xl w-full max-w-sm p-5 shadow-[0_20px_50px_rgba(0,0,0,0.2)] animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-foreground">Export</h2>
           <button
             onClick={onClose}
@@ -56,7 +70,7 @@ export function ExportModal({
 
         {/* Video Preview */}
         {videoUrl && (
-          <div className="mb-4 rounded-xl overflow-hidden border border-border/40">
+          <div className="mb-3 rounded-xl overflow-hidden border border-border/40">
             <video
               src={videoUrl}
               controls
@@ -66,20 +80,20 @@ export function ExportModal({
           </div>
         )}
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           {options.map(({ icon: Icon, label, desc, onClick, available, gradient }) => (
             <button
               key={label}
-              onClick={() => { onClick(); onClose(); }}
+              onClick={() => { onClick(); }}
               disabled={!available}
-              className={`flex items-center gap-3 w-full p-3.5 rounded-xl text-left transition-all duration-200 border border-transparent hover:border-primary/20 hover:bg-gradient-to-r ${gradient} disabled:opacity-30 disabled:cursor-not-allowed group hover:scale-[1.01]`}
+              className={`flex items-center gap-3 w-full p-2.5 rounded-xl text-left transition-all duration-200 border border-transparent hover:border-primary/20 hover:bg-gradient-to-r ${gradient} disabled:opacity-30 disabled:cursor-not-allowed group hover:scale-[1.01]`}
             >
-              <div className="w-10 h-10 rounded-xl bg-secondary/50 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
-                <Icon size={20} className="text-primary" />
+              <div className="w-9 h-9 rounded-xl bg-secondary/50 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                <Icon size={18} className="text-primary" />
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">{label}</p>
-                <p className="text-xs text-muted-foreground">{desc}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{desc}</p>
               </div>
             </button>
           ))}

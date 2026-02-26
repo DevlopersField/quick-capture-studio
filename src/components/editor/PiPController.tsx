@@ -13,6 +13,7 @@ interface Props {
     onDelete: () => void;
     strokeColor: string;
     onColorChange: (color: string) => void;
+    hasSelection: boolean;
     theme: Theme;
 }
 
@@ -41,6 +42,7 @@ export function PiPController({
     pipWindow,
     activeTool, onToolChange, onDelete,
     strokeColor, onColorChange,
+    hasSelection,
     theme,
 }: Props) {
     const [showColors, setShowColors] = useState(false);
@@ -53,21 +55,20 @@ export function PiPController({
     const textColor = isDark ? "hsl(220 10% 60%)" : "#64748b";
     const activeText = isDark ? "hsl(228 14% 7%)" : "#ffffff";
 
-    // Handle dynamic window resizing (safety check included)
-    useEffect(() => {
-        if (typeof pipWindow?.resizeTo !== "function") return;
-
+    const toggleColors = () => {
+        const next = !showColors;
+        setShowColors(next);
         try {
-            if (showColors) {
-                pipWindow.resizeTo(320, 240); // Expand for color list
-                pipWindow.focus?.();
+            if (next) {
+                pipWindow.resizeTo(320, 240);
+                pipWindow.focus();
             } else {
-                pipWindow.resizeTo(320, 56); // Reset to base height
+                pipWindow.resizeTo(320, 56);
             }
         } catch (e) {
-            console.warn("Could not resize PiP window:", e);
+            console.warn("Resize failed:", e);
         }
-    }, [showColors, pipWindow]);
+    };
 
     return createPortal(
         <div
@@ -128,7 +129,7 @@ export function PiPController({
                 {/* Expandable Color Toggle */}
                 <div style={{ display: "flex", alignItems: "center", marginRight: "6px", paddingRight: "8px", borderRight: isDark ? "1px solid hsla(228, 14%, 30%, 0.3)" : "1px solid rgba(0,0,0,0.08)" }}>
                     <button
-                        onClick={() => setShowColors(!showColors)}
+                        onClick={toggleColors}
                         style={{
                             width: "22px",
                             height: "22px",
@@ -185,25 +186,28 @@ export function PiPController({
                 {/* Delete Action */}
                 <button
                     onClick={onDelete}
-                    title="Delete (Del)"
+                    disabled={!hasSelection}
+                    title={hasSelection ? "Delete Selected (Del)" : "Select object to delete"}
                     style={{
                         padding: "6px",
                         borderRadius: "10px",
                         background: "transparent",
                         color: "hsl(0 72% 55%)",
                         border: "none",
-                        cursor: "pointer",
+                        cursor: hasSelection ? "pointer" : "default",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         transition: "all 0.2s",
                         outline: "none",
+                        opacity: hasSelection ? 1 : 0.3,
+                        pointerEvents: hasSelection ? "auto" : "none",
                     }}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "hsla(0, 72%, 55%, 0.1)";
+                        if (hasSelection) e.currentTarget.style.background = "hsla(0, 72%, 55%, 0.1)";
                     }}
                     onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
+                        if (hasSelection) e.currentTarget.style.background = "transparent";
                     }}
                 >
                     <Trash2 size={18} />

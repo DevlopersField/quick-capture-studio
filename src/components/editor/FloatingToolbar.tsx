@@ -10,8 +10,8 @@ interface Props {
   onDelete: () => void;
   onUndo: () => void;
   onRedo: () => void;
-  onCopy: () => void;
   hasContent: boolean;
+  hasSelection: boolean;
   // Recording props
   recorderState: RecordingState;
   recorderElapsed: number;
@@ -44,12 +44,12 @@ const tools: { id: ToolType; icon: React.ElementType; label: string }[] = [
   { id: "arrow", icon: MoveRight, label: "Arrow (A)" },
   { id: "pencil", icon: Pencil, label: "Pencil (P)" },
   { id: "text", icon: Type, label: "Text (T)" },
-  { id: "comment", icon: MessageSquare, label: "Comment Pin (C)" },
+  { id: "comment", icon: MessageCircle, label: "Comment Pin (C)" },
 ];
 
 export function FloatingToolbar({
   activeTool, onToolChange, onDelete,
-  onUndo, onRedo, onCopy, hasContent,
+  onUndo, onRedo, hasContent, hasSelection,
   recorderState, recorderElapsed, recorderIsMuted,
   onRecordStart, onRecordStop, onRecordPause, onRecordResume,
   onRecordToggleMute, formatTime,
@@ -59,13 +59,6 @@ export function FloatingToolbar({
 }: Props) {
   const isRecording = recorderState === "recording" || recorderState === "paused";
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    await onCopy();
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [onCopy]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 px-4 pointer-events-none animate-slide-up">
@@ -134,17 +127,10 @@ export function FloatingToolbar({
             </button>
 
             <button
-              onClick={handleCopy}
-              title="Copy to Clipboard (Ctrl+C)"
-              className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all duration-200"
-            >
-              {copied ? <Check size={18} className="text-green-500" /> : <Clipboard size={18} />}
-            </button>
-
-            <button
               onClick={onDelete}
-              title="Delete Selected (Del)"
-              className="p-2.5 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+              disabled={!hasSelection}
+              title={hasSelection ? "Delete Selected (Del)" : "Select an object to delete"}
+              className="p-2.5 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 disabled:opacity-30 disabled:pointer-events-none"
             >
               <Trash2 size={18} />
             </button>
