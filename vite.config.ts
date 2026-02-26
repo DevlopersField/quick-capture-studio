@@ -23,6 +23,9 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, "index.html"),
+        popup: path.resolve(__dirname, "popup.html"),
+        content: path.resolve(__dirname, "src/content.ts"),
+        background: path.resolve(__dirname, "src/background.ts"),
       },
     },
   },

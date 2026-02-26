@@ -4,6 +4,7 @@ import { useCanvas } from "@/hooks/useCanvas";
 import { useRecorder } from "@/hooks/useRecorder";
 import { usePictureInPicture } from "@/hooks/usePictureInPicture";
 import { useTheme } from "@/hooks/useTheme";
+import { useSearchParams } from "react-router-dom";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { CommentPanel } from "./CommentPanel";
 import { ExportModal } from "./ExportModal";
@@ -15,6 +16,7 @@ export function EditorWorkspace() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showExport, setShowExport] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [searchParams] = useSearchParams();
 
   const {
     activeTool, setActiveTool, comments,
@@ -27,6 +29,34 @@ export function EditorWorkspace() {
   const recorder = useRecorder();
   const { pipWindow, openPiP, closePiP } = usePictureInPicture();
   const { theme, setTheme } = useTheme();
+
+  // Handle query parameters from extension popup
+  useEffect(() => {
+    const mode = searchParams.get("mode");
+    if (!mode) return;
+
+    // Small delay to ensure everything is ready
+    const timer = setTimeout(async () => {
+      if (mode === "record") {
+        recorder.startRecording();
+      } else if (mode === "upload") {
+        fileInputRef.current?.click();
+      } else if (mode === "capture") {
+        try {
+          const result = await chrome.storage.local.get("capturedImage");
+          if (result.capturedImage) {
+            loadImage(result.capturedImage);
+            // Clear storage after loading
+            await chrome.storage.local.remove("capturedImage");
+          }
+        } catch (err) {
+          console.error("Failed to load captured image:", err);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchParams, recorder.startRecording, loadImage]);
 
   // Sync canvas background with theme
   useEffect(() => {
