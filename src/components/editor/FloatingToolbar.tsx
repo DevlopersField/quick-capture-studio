@@ -1,11 +1,11 @@
+import { useState } from "react";
 import {
   MousePointer2, Square, MoveRight, Pencil, Type,
-  MessageCircle, Trash2
+  MessageCircle, Trash2, Upload, Camera, Download
 } from "lucide-react";
 import type { ToolType } from "@/hooks/useCanvas";
 import type { RecordingState } from "@/hooks/useRecorder";
 import { RecordingController } from "./RecordingController";
-import { Upload, Camera, Download } from "lucide-react";
 
 interface Props {
   activeTool: ToolType;
@@ -43,10 +43,7 @@ const tools: { id: ToolType; icon: React.ElementType; label: string }[] = [
   { id: "arrow", icon: MoveRight, label: "Arrow (A)" },
   { id: "pencil", icon: Pencil, label: "Pencil (P)" },
   { id: "text", icon: Type, label: "Text (T)" },
-  { id: "comment", icon: MessageCircle, label: "Comment Pin (C)" },
 ];
-
-import { useState } from "react";
 
 export function FloatingToolbar({
   activeTool, onToolChange, onDelete,

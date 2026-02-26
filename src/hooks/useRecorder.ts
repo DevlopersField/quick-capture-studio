@@ -40,21 +40,35 @@ export function useRecorder() {
       }
 
       // Get screen capture stream
-      console.log("Requesting display media...");
+      console.log("Requesting display media (monitor preferred)...");
       let displayStream: MediaStream;
+
+      const videoConstraints: any = {
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30 }
+      };
+
       try {
         displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: { frameRate: 30 },
-          audio: true, // system audio if supported
+          video: {
+            ...videoConstraints,
+            displaySurface: "monitor",
+          },
+          audio: true,
         });
       } catch (audioErr) {
         console.warn("Retrying without system audio...", audioErr);
         displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: { frameRate: 30 },
+          video: videoConstraints,
           audio: false,
         });
       }
-      console.log("Display media granted:", displayStream.id);
+
+      if (!displayStream || displayStream.getVideoTracks().length === 0) {
+        throw new Error("No video tracks obtained from display media");
+      }
+      console.log("Display media stream obtained:", displayStream.id);
 
       // Try to get microphone audio
       let micStream: MediaStream | null = null;

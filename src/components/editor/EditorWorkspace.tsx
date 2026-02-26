@@ -52,27 +52,27 @@ export function EditorWorkspace() {
     }
   }, [setActiveTool]);
 
-  // Handle recording stop — close PiP controller
+  // Handle recording stop — PiP remains open (sticky)
   const handleRecordStop = useCallback(() => {
     recorder.stopRecording();
-    closePiP();
-  }, [recorder.stopRecording, closePiP]);
+    // closePiP(); // Removed to keep tools sticky
+  }, [recorder.stopRecording]);
 
   // Open PiP when recording starts, close when it ends
   useEffect(() => {
     if (recorder.state === "recording" && !pipWindow) {
       openPiP(320, 56);
-    } else if (recorder.state === "finished" || recorder.state === "idle") {
+    } else if (recorder.state === "idle") {
       closePiP();
     }
   }, [recorder.state, pipWindow, openPiP, closePiP]);
 
   // Auto-open Export Modal when recording finishes
   useEffect(() => {
-    if (recorder.state === "finished" && recorder.videoUrl) {
+    if (recorder.state === "finished") {
       setShowExport(true);
     }
-  }, [recorder.state, recorder.videoUrl]);
+  }, [recorder.state]);
 
   const isRecording = recorder.state === "recording" || recorder.state === "paused";
 
@@ -131,18 +131,15 @@ export function EditorWorkspace() {
 
           {/* Empty State */}
           {!hasImage && (
-            <div
-              className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer z-10 group"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <div className="flex flex-col items-center gap-5 text-muted-foreground animate-fade-in text-center px-6 transition-transform group-hover:scale-[1.02] duration-300">
-                <div className="w-20 h-20 rounded-2xl bg-secondary/30 flex items-center justify-center border border-border/30 shadow-inner group-hover:border-primary/40 group-hover:bg-secondary/50 transition-all">
-                  <Camera size={32} className="text-primary/40 group-hover:text-primary/60 transition-colors" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+              <div className="flex flex-col items-center gap-5 text-muted-foreground animate-fade-in text-center px-6">
+                <div className="w-20 h-20 rounded-2xl bg-secondary/30 flex items-center justify-center border border-border/30 shadow-inner">
+                  <Camera size={32} className="text-primary/40" />
                 </div>
                 <div>
-                  <p className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">No capture loaded</p>
+                  <p className="text-base font-semibold text-foreground">No capture loaded</p>
                   <p className="text-sm text-muted-foreground mt-1.5 max-w-xs leading-relaxed font-medium">
-                    Click here to upload an image or start a screen recording to begin annotating
+                    Upload an image or start a screen recording to begin annotating
                   </p>
                 </div>
               </div>
