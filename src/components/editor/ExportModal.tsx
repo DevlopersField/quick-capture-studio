@@ -1,20 +1,26 @@
-import { X, Image, FileText, Video } from "lucide-react";
+import { X, Image, FileText, Video, Clipboard } from "lucide-react";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onExportPNG: () => void;
   onExportPDF: () => void;
+  onCopyImage: () => void;
   videoUrl: string | null;
   onDownloadVideo: () => void;
 }
 
 export function ExportModal({
-  open, onClose, onExportPNG, onExportPDF, videoUrl, onDownloadVideo,
+  open, onClose, onExportPNG, onExportPDF, onCopyImage, videoUrl, onDownloadVideo,
 }: Props) {
   if (!open) return null;
 
   const options = [
+    {
+      icon: Clipboard, label: "Copy to Clipboard", desc: "Copy image for instant sharing",
+      onClick: onCopyImage, available: true,
+      gradient: "from-green-500/10 to-emerald-500/10",
+    },
     {
       icon: Image, label: "Download PNG", desc: "Flattened canvas image",
       onClick: onExportPNG, available: true,

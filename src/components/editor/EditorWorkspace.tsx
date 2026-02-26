@@ -18,7 +18,8 @@ export function EditorWorkspace() {
 
   const {
     activeTool, setActiveTool, comments,
-    loadImage, loadImageFromFile, exportPNG, exportPDF,
+    loadImage, loadImageFromFile, exportPNG, exportPDF, copyToClipboard,
+    undo, redo,
     deleteSelected, updateComment, hasImage,
     strokeColor, setStrokeColor, setCanvasBackground,
   } = useCanvas(containerRef);
@@ -75,6 +76,7 @@ export function EditorWorkspace() {
   }, [recorder.state]);
 
   const isRecording = recorder.state === "recording" || recorder.state === "paused";
+  const hasContent = hasImage || !!recorder.videoUrl || isRecording;
 
   const nextTheme = () => {
     if (theme === "system") setTheme("dark");
@@ -161,6 +163,10 @@ export function EditorWorkspace() {
         activeTool={activeTool}
         onToolChange={handleToolChange}
         onDelete={deleteSelected}
+        onUndo={undo}
+        onRedo={redo}
+        onCopy={copyToClipboard}
+        hasContent={hasContent}
         recorderState={recorder.state}
         recorderElapsed={recorder.elapsed}
         recorderIsMuted={recorder.isMuted}
@@ -199,6 +205,7 @@ export function EditorWorkspace() {
         onClose={() => setShowExport(false)}
         onExportPNG={exportPNG}
         onExportPDF={exportPDF}
+        onCopyImage={copyToClipboard}
         videoUrl={recorder.videoUrl}
         onDownloadVideo={recorder.downloadVideo}
       />

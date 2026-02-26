@@ -1,8 +1,5 @@
-import { useState } from "react";
-import {
-  MousePointer2, Square, MoveRight, Pencil, Type,
-  MessageCircle, Trash2, Upload, Camera, Download
-} from "lucide-react";
+import { useState, useCallback } from "react";
+import { Undo2, Redo2, Clipboard, MousePointer2, Square, MoveRight, Pencil, Type, MessageCircle, Trash2, Upload, Camera, Download, Check, MessageSquare } from "lucide-react";
 import type { ToolType } from "@/hooks/useCanvas";
 import type { RecordingState } from "@/hooks/useRecorder";
 import { RecordingController } from "./RecordingController";
@@ -11,6 +8,10 @@ interface Props {
   activeTool: ToolType;
   onToolChange: (tool: ToolType) => void;
   onDelete: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  onCopy: () => void;
+  hasContent: boolean;
   // Recording props
   recorderState: RecordingState;
   recorderElapsed: number;
@@ -43,10 +44,12 @@ const tools: { id: ToolType; icon: React.ElementType; label: string }[] = [
   { id: "arrow", icon: MoveRight, label: "Arrow (A)" },
   { id: "pencil", icon: Pencil, label: "Pencil (P)" },
   { id: "text", icon: Type, label: "Text (T)" },
+  { id: "comment", icon: MessageSquare, label: "Comment Pin (C)" },
 ];
 
 export function FloatingToolbar({
   activeTool, onToolChange, onDelete,
+  onUndo, onRedo, onCopy, hasContent,
   recorderState, recorderElapsed, recorderIsMuted,
   onRecordStart, onRecordStop, onRecordPause, onRecordResume,
   onRecordToggleMute, formatTime,
@@ -56,6 +59,13 @@ export function FloatingToolbar({
 }: Props) {
   const isRecording = recorderState === "recording" || recorderState === "paused";
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    await onCopy();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [onCopy]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 px-4 pointer-events-none animate-slide-up">
@@ -105,6 +115,32 @@ export function FloatingToolbar({
                 <Icon size={18} />
               </button>
             ))}
+
+            <div className="w-px h-6 bg-border/40 mx-1" />
+
+            <button
+              onClick={onUndo}
+              title="Undo (Ctrl+Z)"
+              className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all duration-200"
+            >
+              <Undo2 size={18} />
+            </button>
+            <button
+              onClick={onRedo}
+              title="Redo (Ctrl+Y)"
+              className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all duration-200"
+            >
+              <Redo2 size={18} />
+            </button>
+
+            <button
+              onClick={handleCopy}
+              title="Copy to Clipboard (Ctrl+C)"
+              className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all duration-200"
+            >
+              {copied ? <Check size={18} className="text-green-500" /> : <Clipboard size={18} />}
+            </button>
+
             <button
               onClick={onDelete}
               title="Delete Selected (Del)"
@@ -161,8 +197,9 @@ export function FloatingToolbar({
           </button>
           <button
             onClick={onExport}
-            title="Export / Download"
-            className="flex items-center gap-1.5 bg-primary/90 hover:bg-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-[1.03] hover:shadow-lg hover:shadow-cyan-500/20"
+            disabled={!hasContent}
+            title={hasContent ? "Export / Download" : "Capture something first to export"}
+            className="flex items-center gap-1.5 bg-primary/90 hover:bg-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-[1.03] hover:shadow-lg hover:shadow-cyan-500/20 disabled:opacity-30 disabled:pointer-events-none disabled:grayscale"
           >
             <Download size={15} />
             Export

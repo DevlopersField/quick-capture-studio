@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Canvas, Rect, Line, PencilBrush, IText, Circle, Group, Textbox, FabricImage } from "fabric";
+import { Canvas, Rect, Line, PencilBrush, IText, Circle, Group, Textbox, FabricImage, util } from "fabric";
 
 export type ToolType = "select" | "rectangle" | "arrow" | "pencil" | "text" | "comment";
 
@@ -18,6 +18,52 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
   const commentCountRef = useRef(0);
   const [hasImage, setHasImage] = useState(false);
 
+  // Undo/Redo History
+  const historyRef = useRef<string[]>([]);
+  const redoStackRef = useRef<string[]>([]);
+  const isHandlingHistoryRef = useRef(false);
+
+  // Selection Clipboard (Fabric internal)
+  const clipboardRef = useRef<any>(null);
+
+  const saveHistory = useCallback(() => {
+    if (!canvasRef.current || isHandlingHistoryRef.current) return;
+    const json = JSON.stringify(canvasRef.current.toJSON());
+    // Only save if it's different from the last state
+    if (historyRef.current.length > 0 && historyRef.current[historyRef.current.length - 1] === json) return;
+
+    historyRef.current.push(json);
+    if (historyRef.current.length > 50) historyRef.current.shift(); // Limit history
+    redoStackRef.current = []; // Clear redo on new action
+  }, []);
+
+  const undo = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas || historyRef.current.length <= 1) return;
+
+    isHandlingHistoryRef.current = true;
+    const currentState = historyRef.current.pop()!;
+    redoStackRef.current.push(currentState);
+
+    const prevState = historyRef.current[historyRef.current.length - 1];
+    await canvas.loadFromJSON(JSON.parse(prevState));
+    canvas.renderAll();
+    isHandlingHistoryRef.current = false;
+  }, []);
+
+  const redo = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas || redoStackRef.current.length === 0) return;
+
+    isHandlingHistoryRef.current = true;
+    const nextState = redoStackRef.current.pop()!;
+    historyRef.current.push(nextState);
+
+    await canvas.loadFromJSON(JSON.parse(nextState));
+    canvas.renderAll();
+    isHandlingHistoryRef.current = false;
+  }, []);
+
   // Initialize canvas
   useEffect(() => {
     if (!containerRef.current) return;
@@ -30,6 +76,9 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     });
     canvasRef.current = canvas;
 
+    // Save initial state
+    saveHistory();
+
     const handleResize = () => {
       canvas.setDimensions({
         width: container.clientWidth,
@@ -40,17 +89,110 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     const ro = new ResizeObserver(handleResize);
     ro.observe(container);
 
-    // Keyboard delete handler
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === "Delete" || e.key === "Backspace") && canvas.getActiveObjects().length > 0) {
-        // Don't delete if user is typing in an IText
-        const target = e.target as HTMLElement;
-        if (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable) return;
-        canvas.getActiveObjects().forEach(obj => canvas.remove(obj));
+    // Event listeners for history
+    canvas.on("object:added", saveHistory);
+    canvas.on("object:modified", saveHistory);
+    canvas.on("object:removed", saveHistory);
+
+    // Keyboard Shortcuts
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+      const cmdKey = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ignore if user is in an input or IText is being edited
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable;
+      // Also check if fabric is in editing mode
+      const activeObj = canvas.getActiveObject();
+      const isEditing = activeObj instanceof IText && activeObj.isEditing;
+
+      if (isInput || isEditing) {
+        // Still allow Undo/Redo even in text if needed, but let's stick to standard behavior
+        if (!(cmdKey && (e.key.toLowerCase() === "z" || e.key.toLowerCase() === "y"))) return;
+      }
+
+      // 1. Delete
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (canvas.getActiveObjects().length > 0) {
+          canvas.getActiveObjects().forEach(obj => canvas.remove(obj));
+          canvas.discardActiveObject();
+          canvas.renderAll();
+          saveHistory();
+        }
+      }
+
+      // 2. Undo/Redo
+      if (cmdKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+      }
+      if (cmdKey && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
+      }
+
+      // 3. Select All
+      if (cmdKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
         canvas.discardActiveObject();
-        canvas.renderAll();
+        const objs = canvas.getObjects().filter(o => o.selectable);
+        const sel = new Group(objs, { canvas });
+        canvas.setActiveObject(sel);
+        canvas.requestRenderAll();
+      }
+
+      // 4. Copy/Paste/Cut
+      if (cmdKey && e.key.toLowerCase() === "c") {
+        const active = canvas.getActiveObject();
+        if (active) {
+          active.clone().then((cloned) => {
+            clipboardRef.current = cloned;
+          });
+        }
+      }
+
+      if (cmdKey && e.key.toLowerCase() === "x") {
+        const active = canvas.getActiveObject();
+        if (active) {
+          active.clone().then((cloned) => {
+            clipboardRef.current = cloned;
+            canvas.getActiveObjects().forEach(obj => canvas.remove(obj));
+            canvas.discardActiveObject();
+            canvas.renderAll();
+            saveHistory();
+          });
+        }
+      }
+
+      if (cmdKey && e.key.toLowerCase() === "v") {
+        if (clipboardRef.current) {
+          clipboardRef.current.clone().then((clonedObj) => {
+            canvas.discardActiveObject();
+            clonedObj.set({
+              left: clonedObj.left + 20,
+              top: clonedObj.top + 20,
+              evented: true,
+            });
+            if (clonedObj instanceof Group) {
+              clonedObj.canvas = canvas;
+              clonedObj.forEachObject((obj) => {
+                canvas.add(obj);
+              });
+              canvas.setActiveObject(clonedObj);
+            } else {
+              canvas.add(clonedObj);
+              canvas.setActiveObject(clonedObj);
+            }
+            // Update clipboard for subsequent pastes
+            clipboardRef.current.top += 20;
+            clipboardRef.current.left += 20;
+            canvas.requestRenderAll();
+            saveHistory();
+          });
+        }
       }
     };
+
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
@@ -59,7 +201,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
       canvas.dispose();
       canvasRef.current = null;
     };
-  }, [containerRef]);
+  }, [containerRef, saveHistory, undo, redo]);
 
   // Handle strokeColor change for active pencil brush
   useEffect(() => {
@@ -223,7 +365,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
         setActiveTool("select");
       });
     }
-  }, [activeTool, strokeColor]);
+  }, [activeTool, strokeColor, saveHistory]);
 
   const setCanvasBackground = useCallback((color: string) => {
     if (canvasRef.current) {
@@ -253,10 +395,11 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
       canvas.set({ backgroundColor: bgColor });
       canvas.renderAll();
       setHasImage(true);
+      saveHistory(); // Log image load
     } catch (e) {
       console.error("Failed to load image", e);
     }
-  }, []);
+  }, [saveHistory]);
 
   const loadImageFromFile = useCallback((file: File) => {
     const reader = new FileReader();
@@ -288,6 +431,21 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     pdf.save("1clickcapture-export.pdf");
   }, []);
 
+  const copyToClipboard = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      const dataURL = canvas.toDataURL({ format: "png", multiplier: 1.5 });
+      const blob = await (await fetch(dataURL)).blob();
+      const item = new ClipboardItem({ [blob.type]: blob });
+      await navigator.clipboard.write([item]);
+      return true;
+    } catch (err) {
+      console.error("Clipboard copy failed:", err);
+      return false;
+    }
+  }, []);
+
   const deleteSelected = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -303,7 +461,8 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
 
   return {
     canvasRef, activeTool, setActiveTool, comments,
-    loadImage, loadImageFromFile, exportPNG, exportPDF,
+    loadImage, loadImageFromFile, exportPNG, exportPDF, copyToClipboard,
+    undo, redo,
     deleteSelected, updateComment, hasImage,
     strokeColor, setStrokeColor, setCanvasBackground,
   };
