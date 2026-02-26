@@ -518,8 +518,7 @@ function createRecordingController() {
     });
 
     document.getElementById('oneclick-stop')?.addEventListener('click', () => {
-        mediaRecorder?.stop();
-        cleanupRecording();
+        chrome.runtime.sendMessage({ action: "stopRecording" });
     });
 }
 
@@ -527,6 +526,8 @@ function cleanupRecording() {
     if (recordingTimerInterval) clearInterval(recordingTimerInterval);
     if (recorderWidget) { document.body.removeChild(recorderWidget); recorderWidget = null; }
     if (drawingCanvas) { document.body.removeChild(drawingCanvas); drawingCanvas = null; }
+    currentStream?.getTracks().forEach(t => t.stop());
+    currentStream = null;
     currentTool = 'none';
 }
 
@@ -586,8 +587,17 @@ async function startRecording() {
                     };
                     reader.readAsDataURL(blob);
                     cleanupRecording();
+                    // Notify other tabs to cleanup
                     chrome.runtime.sendMessage({ action: "stopRecording" });
                 };
+
+                // Handle native browser "Stop sharing" button
+                currentStream.getVideoTracks()[0].onended = () => {
+                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                        mediaRecorder.stop();
+                    }
+                };
+
                 mediaRecorder.start();
                 createRecordingController();
                 resolve();

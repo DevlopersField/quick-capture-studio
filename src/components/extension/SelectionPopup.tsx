@@ -22,7 +22,7 @@ export function SelectionPopup() {
             if (!tab?.id) return;
 
             if (isFullPage) {
-                chrome.tabs.sendMessage(tab.id, { action: "startFullPageCapture" });
+                chrome.tabs.sendMessage(tab.id, { action: "startFullPage" });
                 window.close();
             } else {
                 // Trigger area selection in content script

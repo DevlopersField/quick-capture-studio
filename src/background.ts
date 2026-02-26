@@ -13,7 +13,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === "openRecordStudio") {
-        const url = chrome.runtime.getURL(`index.html#/?mode=record&videoUrl=${encodeURIComponent(request.videoUrl)}`);
+        const url = chrome.runtime.getURL("index.html#/?mode=capture");
         chrome.tabs.create({ url });
     }
 
