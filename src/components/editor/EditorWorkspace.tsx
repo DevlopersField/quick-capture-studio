@@ -161,7 +161,7 @@ export function EditorWorkspace() {
 
       {/* Canvas Area */}
       <div className="flex-1 flex flex-col relative">
-        <div ref={containerRef} className="flex-1 relative overflow-hidden pb-[72px]">
+        <div ref={containerRef} className="flex-1 relative overflow-hidden pb-[72px] canvas-grid-pattern">
           <canvas id="editor-canvas" />
 
           {/* Empty State */}

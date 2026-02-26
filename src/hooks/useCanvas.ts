@@ -103,8 +103,86 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     canvas.on("selection:updated", updateSelection);
     canvas.on("selection:cleared", updateSelection);
 
+    // --- Figma-style Zoom & Pan ---
+    let isPanning = false;
+    let isSpacePressed = false;
+
+    canvas.on("mouse:wheel", (opt) => {
+      const delta = opt.e.deltaY;
+      let zoom = canvas.getZoom();
+      zoom *= 0.999 ** delta;
+      if (zoom > 20) zoom = 20;
+      if (zoom < 0.1) zoom = 0.1;
+
+      // Zoom towards center of viewport for trackpad, or mouse point?
+      // Figma zooms toward mouse point.
+      canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY } as any, zoom);
+      opt.e.preventDefault();
+      opt.e.stopPropagation();
+    });
+
+    canvas.on("mouse:down", (opt) => {
+      const evt = opt.e as MouseEvent;
+      // Pan if space is pressed OR middle mouse button (button 1)
+      if (isSpacePressed || evt.button === 1) {
+        isPanning = true;
+        canvas.selection = false;
+        canvas.defaultCursor = "grabbing";
+        canvas.renderAll();
+      }
+    });
+
+    canvas.on("mouse:move", (opt) => {
+      if (isPanning) {
+        const e = opt.e as MouseEvent;
+        const vpt = canvas.viewportTransform!;
+        vpt[4] += e.movementX;
+        vpt[5] += e.movementY;
+        canvas.requestRenderAll();
+      }
+    });
+
+    canvas.on("mouse:up", () => {
+      if (isPanning) {
+        isPanning = false;
+        canvas.selection = true;
+        canvas.defaultCursor = isSpacePressed ? "grab" : "default";
+        canvas.renderAll();
+      }
+    });
+
+    const handleSpaceKey = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        const target = e.target as HTMLElement;
+        const isInput = target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable;
+        const activeObj = canvas.getActiveObject();
+        const isEditing = activeObj instanceof IText && activeObj.isEditing;
+
+        if (isInput || isEditing) return;
+
+        e.preventDefault();
+        if (e.type === "keydown") {
+          if (!isSpacePressed) {
+            isSpacePressed = true;
+            canvas.defaultCursor = "grab";
+            canvas.selection = false;
+            canvas.renderAll();
+          }
+        } else {
+          isSpacePressed = false;
+          canvas.defaultCursor = "default";
+          canvas.selection = true;
+          canvas.renderAll();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleSpaceKey);
+    window.addEventListener("keyup", handleSpaceKey);
+
     // Keyboard Shortcuts
     const handleKeyDown = async (e: KeyboardEvent) => {
+      if (e.code === "Space") return; // Handled separately
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const cmdKey = isMac ? e.metaKey : e.ctrlKey;
 
