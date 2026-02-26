@@ -23,6 +23,12 @@ export function Navbar() {
                     Privacy
                 </Link>
                 <Link
+                    to="/terms"
+                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+                >
+                    Terms
+                </Link>
+                <Link
                     to="/contact"
                     className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
                 >

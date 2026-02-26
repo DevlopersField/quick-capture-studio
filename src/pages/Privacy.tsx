@@ -13,8 +13,21 @@ export default function Privacy() {
                             <Shield className="text-primary" size={24} />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Privacy Policy</h1>
-                            <p className="text-sm text-muted-foreground mt-1">Last updated: February 16, 2026</p>
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight">Privacy Policy</h1>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1">
+                                    <p className="text-sm text-muted-foreground">Last updated: February 16, 2026</p>
+                                    <span className="hidden sm:block text-muted-foreground/30">•</span>
+                                    <a
+                                        href="https://1clickcapture.netlify.app/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-primary hover:underline font-medium"
+                                    >
+                                        1clickcapture.netlify.app
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

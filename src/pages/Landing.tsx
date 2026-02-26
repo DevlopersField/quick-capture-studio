@@ -103,10 +103,11 @@ export default function Landing() {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-8">
-                        <Link to="/studio" className="text-sm font-medium text-muted-foreground hover:text-foreground">Studio</Link>
-                        <Link to="/privacy" className="text-sm font-medium text-muted-foreground hover:text-foreground">Privacy Policy</Link>
-                        <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-foreground">Contact</Link>
+                    <div className="flex items-center gap-8 text-sm font-medium text-muted-foreground">
+                        <Link to="/studio" className="hover:text-foreground transition-colors">Studio</Link>
+                        <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+                        <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+                        <Link to="/contact" className="hover:text-foreground transition-colors">Contact</Link>
                     </div>
                 </div>
             </footer>
