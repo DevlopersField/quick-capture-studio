@@ -11,6 +11,10 @@ import { ExportModal } from "./ExportModal";
 import { PiPController } from "./PiPController";
 
 
+import { Logo } from "../layout/Logo";
+import { ThemeToggle } from "../layout/ThemeToggle";
+
+
 export function EditorWorkspace() {
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,20 +139,11 @@ export function EditorWorkspace() {
   const isRecording = recorder.state === "recording" || recorder.state === "paused";
   const hasContent = hasImage || !!recorder.videoUrl || isRecording;
 
-  const nextTheme = () => {
-    if (theme === "system") setTheme("dark");
-    else if (theme === "dark") setTheme("light");
-    else setTheme("system");
-  };
-
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden relative transition-colors duration-300">
       {/* Floating Logo Badge (top-left) */}
-      <div className="absolute top-4 left-4 z-30 flex items-center gap-2 glass-panel rounded-xl px-3 py-2 animate-fade-in">
-        <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-          <Camera size={14} className="text-primary-foreground" />
-        </div>
-        <span className="text-sm font-semibold text-foreground tracking-tight">1ClickCapture</span>
+      <div className="absolute top-4 left-4 z-30 flex items-center gap-2 glass-panel rounded-xl px-3 py-2 animate-fade-in shadow-xl">
+        <Logo className="scale-75 origin-left" />
         {isRecording && (
           <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-border/40">
             <span className="recording-dot" />
@@ -161,8 +156,7 @@ export function EditorWorkspace() {
 
       {/* Top Right Actions (Theme Toggle & Comments) */}
       <div className="absolute top-4 right-4 z-30 flex items-center gap-2 animate-fade-in">
-        {/* Mode Toggle & Add Image */}
-        <div className="flex items-center gap-1.5 glass-panel rounded-xl p-1 shadow-sm border border-border/40">
+        <div className="glass-panel p-1 rounded-xl shadow-sm border border-border/40 flex items-center gap-1.5 ">
           <input
             type="file"
             ref={addImageInputRef}
@@ -180,31 +174,7 @@ export function EditorWorkspace() {
           </button>
 
           <div className="w-[1px] h-4 bg-border/40 mx-1" />
-
-          <button
-            onClick={() => setTheme("light")}
-            className={`p-1.5 rounded-lg transition-all duration-200 ${theme === "light" ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            title="Light Mode"
-          >
-            <Sun size={16} />
-          </button>
-          <button
-            onClick={() => setTheme("dark")}
-            className={`p-1.5 rounded-lg transition-all duration-200 ${theme === "dark" ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            title="Dark Mode"
-          >
-            <Moon size={16} />
-          </button>
-          <button
-            onClick={() => setTheme("system")}
-            className={`p-1.5 rounded-lg transition-all duration-200 ${theme === "system" ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            title="System Mode"
-          >
-            <Monitor size={16} />
-          </button>
+          <ThemeToggle className="!glass-panel-none !p-0 !border-0 !shadow-none !bg-transparent" />
         </div>
 
         <button

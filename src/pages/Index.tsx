@@ -1,5 +1,5 @@
-import { EditorWorkspace } from "@/components/editor/EditorWorkspace";
+import Landing from "./Landing";
 
-const Index = () => <EditorWorkspace />;
+const Index = () => <Landing />;
 
 export default Index;
