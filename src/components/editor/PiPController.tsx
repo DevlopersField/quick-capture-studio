@@ -84,6 +84,13 @@ export function PiPController({
         syncToolToPages(activeTool, color);
     };
 
+    const handleDelete = () => {
+        onDelete(); // For studio
+        try {
+            chrome.runtime?.sendMessage({ action: "clearDrawingCanvas" });
+        } catch (e) { /* ignore */ }
+    };
+
     const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     const bg = isDark ? "hsl(228 14% 8%)" : "#ffffff";
@@ -228,23 +235,20 @@ export function PiPController({
                 {/* Divider */}
                 <div style={{ width: "1px", height: "24px", background: dividerColor, margin: "0 4px" }} />
 
-                {/* Delete Action */}
+                {/* Delete / Clear Action */}
                 <button
-                    onClick={onDelete}
-                    disabled={!hasSelection}
-                    title={hasSelection ? "Delete Selected (Del)" : "Select object to delete"}
+                    onClick={handleDelete}
+                    title="Clear drawings or delete selection"
                     style={{
                         ...btnStyle(),
                         color: "hsl(0 72% 55%)",
-                        opacity: hasSelection ? 1 : 0.3,
-                        pointerEvents: hasSelection ? "auto" : "none",
-                        cursor: hasSelection ? "pointer" : "default",
+                        cursor: "pointer",
                     }}
                     onMouseEnter={(e) => {
-                        if (hasSelection) e.currentTarget.style.background = "hsla(0, 72%, 55%, 0.1)";
+                        e.currentTarget.style.background = "hsla(0, 72%, 55%, 0.1)";
                     }}
                     onMouseLeave={(e) => {
-                        if (hasSelection) e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.background = "transparent";
                     }}
                 >
                     <Trash2 size={18} />

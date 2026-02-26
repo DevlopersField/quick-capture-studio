@@ -48,7 +48,6 @@ function toggleFixedElements(filter: 'all' | 'headerOnly' | 'footerOnly' | 'none
 async function captureFullPage() {
     const originalScrollPos = { x: window.scrollX, y: window.scrollY };
 
-    // Real document dimensions (without buffer)
     const realDocumentHeight = Math.ceil(Math.max(
         document.body.scrollHeight, document.documentElement.scrollHeight,
         document.body.offsetHeight, document.documentElement.offsetHeight,
@@ -64,13 +63,9 @@ async function captureFullPage() {
         document.documentElement.getBoundingClientRect().width
     ));
 
-    // Scrolling limit with 150px buffer for stability
-    const scrollableHeight = realDocumentHeight + 150;
-
     const viewportHeight = window.innerHeight;
     const scale = window.devicePixelRatio;
 
-    // Canvas should only be the REAL size of the page
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(documentWidth * scale);
     canvas.height = Math.round(realDocumentHeight * scale);
@@ -87,7 +82,6 @@ async function captureFullPage() {
     const originalDocPaddingBottom = document.documentElement.style.paddingBottom;
 
     document.documentElement.style.setProperty('overflow', 'hidden', 'important');
-    // Extend body to allow scrolling beyond original content
     document.body.style.setProperty('padding-bottom', '200px', 'important');
     document.documentElement.style.setProperty('padding-bottom', '200px', 'important');
 
@@ -109,7 +103,6 @@ async function captureFullPage() {
         window.scrollTo(0, targetY);
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Important: Force actualY to be integer to avoid fractional offsets causing gaps
         const actualY = Math.floor(window.scrollY);
 
         let filter: 'all' | 'headerOnly' | 'footerOnly' | 'none' = 'all';
@@ -133,10 +126,6 @@ async function captureFullPage() {
             imgEl.src = dataUrl;
         });
 
-        // Track positions in PHYSICAL PIXELS to eliminate rounding gaps
-        // The key insight: we must never independently round destY and drawHeight,
-        // because round(a) + round(b) != round(a+b), causing 1px seams.
-
         let sourceY = 0;
         let destY = actualY;
         let drawHeight = viewportHeight;
@@ -148,14 +137,11 @@ async function captureFullPage() {
             drawHeight = viewportHeight - overlap;
         }
 
-        // Clip to real document height
         if (destY + drawHeight > realDocumentHeight) {
             drawHeight = realDocumentHeight - destY;
         }
 
         if (drawHeight > 0) {
-            // Calculate physical pixel positions using FLOOR for start, CEIL for dimensions
-            // This ensures segments always touch/overlap by 1px rather than having gaps
             const srcYPx = Math.floor(sourceY * scale);
             const dstYPx = Math.floor(destY * scale);
             const drawHPx = Math.ceil(drawHeight * scale);
@@ -172,7 +158,6 @@ async function captureFullPage() {
         toggleFixedElements('none', false);
     }
 
-    // Restore UI visibility after full capture completes
     if (selectionLayer) selectionLayer.style.removeProperty('display');
     if (recorderWidget) recorderWidget.style.setProperty('visibility', 'visible', 'important');
     if (drawingCanvas) drawingCanvas.style.setProperty('visibility', 'visible', 'important');
@@ -242,7 +227,7 @@ function createSelectionLayer() {
             captureBtn.onclick = async () => {
                 document.body.removeChild(selectionLayer!);
                 selectionLayer = null;
-                chrome.runtime.sendMessage({ action: "captureVisibleTab", area: { x: rect.left, y: rect.top, width: rect.width, height: rect.height, devicePixelRatio: window.devicePixelRatio } }, async (response) => {
+                chrome.runtime.sendMessage({ action: "captureVisibleTab", area: { x: rect.left, y: rect.top, width: rect.width, height: rect.height, devicePixelRatio: window.devicePixelRatio } }, (response) => {
                     if (response.dataUrl) {
                         const img = new Image();
                         img.onload = () => {
@@ -280,89 +265,171 @@ let currentTool: 'pencil' | 'arrow' | 'rect' | 'none' = 'none';
 
 function initDrawingCanvas() {
     if (drawingCanvas) return;
-    drawingCanvas = document.createElement('canvas');
-    drawingCanvas.id = 'oneclick-drawing-canvas';
     
-    // Use full document size so drawings scroll with the page
-    const docW = Math.max(document.body.scrollWidth, document.documentElement.scrollWidth);
-    const docH = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
-    drawingCanvas.width = docW;
-    drawingCanvas.height = docH;
-    drawingCanvas.style.cssText = `position: absolute; top: 0; left: 0; pointer-events: none; z-index: ${parseInt(MAX_Z_INDEX) - 1};`;
-    document.body.appendChild(drawingCanvas);
-
-    const ctx = drawingCanvas.getContext('2d');
-    if (!ctx) return;
-
     let isDrawing = false;
     let startX = 0;
     let startY = 0;
-    let drawingData: any[] = [];
+    let drawingData: { tool: string; x1: number; y1: number; x2?: number; y2?: number; color: string; text?: string }[] = [];
     let currentColor = '#00d4ff';
 
-    // Convert viewport mouse coords to absolute page coords
     const pageX = (e: MouseEvent) => e.clientX + window.scrollX;
     const pageY = (e: MouseEvent) => e.clientY + window.scrollY;
 
-    const drawLine = (x1: number, y1: number, x2: number, y2: number) => {
+    function drawLine(x1: number, y1: number, x2: number, y2: number) {
+        const ctx = drawingCanvas?.getContext('2d');
+        if (!ctx) return;
         ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-        ctx.strokeStyle = currentColor; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.stroke();
-    };
+        ctx.strokeStyle = currentColor; ctx.lineWidth = 4; ctx.stroke();
+    }
 
-    const drawArrow = (x1: number, y1: number, x2: number, y2: number) => {
-        const headlen = 10;
+    function drawArrow(x1: number, y1: number, x2: number, y2: number) {
+        const ctx = drawingCanvas?.getContext('2d');
+        if (!ctx) return;
+        const headlen = 12;
         const angle = Math.atan2(y2 - y1, x2 - x1);
         ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
         ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
         ctx.moveTo(x2, y2);
         ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
         ctx.strokeStyle = currentColor; ctx.lineWidth = 4; ctx.stroke();
-    };
+    }
 
-    const drawRect = (x1: number, y1: number, x2: number, y2: number) => {
+    function drawRect(x1: number, y1: number, x2: number, y2: number) {
+        const ctx = drawingCanvas?.getContext('2d');
+        if (!ctx) return;
         ctx.strokeStyle = currentColor; ctx.lineWidth = 4;
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-    };
+    }
+
+    function drawText(text: string, x: number, y: number, color: string) {
+        const ctx = drawingCanvas?.getContext('2d');
+        if (!ctx) return;
+        ctx.font = 'bold 20px "Outfit", "Inter", sans-serif';
+        ctx.fillStyle = color;
+        ctx.fillText(text, x, y);
+    }
+
+    function redrawAll() {
+        const ctx = drawingCanvas?.getContext('2d');
+        if (!ctx || !drawingCanvas) return;
+        ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        drawingData.forEach(d => {
+            const prevColor = currentColor;
+            currentColor = d.color || '#00d4ff';
+            if (d.tool === 'arrow' && d.x2 !== undefined && d.y2 !== undefined) drawArrow(d.x1, d.y1, d.x2, d.y2);
+            else if (d.tool === 'rect' && d.x2 !== undefined && d.y2 !== undefined) drawRect(d.x1, d.y1, d.x2, d.y2);
+            else if (d.tool === 'pencil-seg' && d.x2 !== undefined && d.y2 !== undefined) drawLine(d.x1, d.y1, d.x2, d.y2);
+            else if (d.tool === 'text' && d.text) drawText(d.text, d.x1, d.y1, currentColor);
+            currentColor = prevColor;
+        });
+    }
+
+    function updateSize() {
+        if (!drawingCanvas) return;
+        const docW = document.documentElement.clientWidth;
+        const docH = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, window.innerHeight);
+        
+        if (drawingCanvas.width !== docW || drawingCanvas.height !== docH) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = drawingCanvas.width;
+            tempCanvas.height = drawingCanvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx?.drawImage(drawingCanvas, 0, 0);
+            
+            drawingCanvas.width = docW;
+            drawingCanvas.height = docH;
+            
+            const ctx = drawingCanvas.getContext('2d');
+            if (ctx) {
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.drawImage(tempCanvas, 0, 0);
+                redrawAll();
+            }
+        }
+    }
+
+    drawingCanvas = document.createElement('canvas');
+    drawingCanvas.id = 'oneclick-drawing-canvas';
+    updateSize();
+    drawingCanvas.style.cssText = `position: absolute; top: 0; left: 0; pointer-events: none; z-index: ${parseInt(MAX_Z_INDEX) - 1}; max-width: 100vw; overflow: hidden;`;
+    document.body.appendChild(drawingCanvas);
+
+    const resizeObserver = new ResizeObserver(() => updateSize());
+    resizeObserver.observe(document.body);
+
+    const ctx = drawingCanvas.getContext('2d');
+    if (ctx) {
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+    }
 
     window.addEventListener('mousedown', (e) => {
         if (currentTool === 'none') return;
-        isDrawing = true; startX = pageX(e); startY = pageY(e);
+        
+        // Ignore clicks on our own UI
+        const target = e.target as HTMLElement;
+        if (target.closest('#oneclick-recorder-widget') || target.tagName === 'INPUT') return;
+        
+        const x = pageX(e);
+        const y = pageY(e);
+
+        if (currentTool === 'text') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.style.cssText = `position: absolute; left: ${x}px; top: ${y - 15}px; background: rgba(0,0,0,0.8); color: ${currentColor}; border: 1px solid ${currentColor}; outline: none; padding: 4px 8px; font-size: 20px; font-weight: bold; border-radius: 4px; z-index: ${MAX_Z_INDEX}; font-family: sans-serif;`;
+            document.body.appendChild(input);
+            setTimeout(() => input.focus(), 10);
+
+            const finishText = () => {
+                if (input.value.trim()) {
+                    drawingData.push({ tool: 'text', text: input.value, x1: x, y1: y, color: currentColor });
+                    redrawAll();
+                }
+                document.body.removeChild(input);
+            };
+
+            input.onkeydown = (ev) => { if (ev.key === 'Enter') finishText(); };
+            input.onblur = finishText;
+            return;
+        }
+
+        isDrawing = true; startX = x; startY = y;
     });
 
     window.addEventListener('mousemove', (e) => {
-        if (!isDrawing || currentTool === 'none') return;
+        if (!isDrawing || currentTool === 'none' || currentTool === 'text') return;
+        const curX = pageX(e);
+        const curY = pageY(e);
+        
         if (currentTool === 'pencil') {
-            drawLine(startX, startY, pageX(e), pageY(e));
-            drawingData.push({ tool: 'pencil-seg', x1: startX, y1: startY, x2: pageX(e), y2: pageY(e), color: currentColor });
-            startX = pageX(e); startY = pageY(e);
+            drawLine(startX, startY, curX, curY);
+            drawingData.push({ tool: 'pencil-seg', x1: startX, y1: startY, x2: curX, y2: curY, color: currentColor });
+            startX = curX; startY = curY;
         } else {
-            ctx.clearRect(0, 0, drawingCanvas!.width, drawingCanvas!.height);
-            redrawAll();
-            if (currentTool === 'arrow') drawArrow(startX, startY, pageX(e), pageY(e));
-            else if (currentTool === 'rect') drawRect(startX, startY, pageX(e), pageY(e));
+            const ctx = drawingCanvas?.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, drawingCanvas!.width, drawingCanvas!.height);
+                redrawAll();
+                if (currentTool === 'arrow') drawArrow(startX, startY, curX, curY);
+                else if (currentTool === 'rect') drawRect(startX, startY, curX, curY);
+            }
         }
     });
 
     window.addEventListener('mouseup', (e) => {
-        if (!isDrawing || currentTool === 'none') return;
+        if (!isDrawing || currentTool === 'none' || currentTool === 'text') return;
         isDrawing = false;
         if (currentTool !== 'pencil') {
             drawingData.push({ tool: currentTool, x1: startX, y1: startY, x2: pageX(e), y2: pageY(e), color: currentColor });
         }
     });
 
-    const redrawAll = () => {
-        drawingData.forEach(d => {
-            const prevColor = currentColor;
-            currentColor = d.color || '#00d4ff';
-            if (d.tool === 'arrow') drawArrow(d.x1, d.y1, d.x2, d.y2);
-            else if (d.tool === 'rect') drawRect(d.x1, d.y1, d.x2, d.y2);
-            else if (d.tool === 'pencil-seg') drawLine(d.x1, d.y1, d.x2, d.y2);
-            currentColor = prevColor;
-        });
+    (drawingCanvas as any).clear = () => { 
+        drawingData = []; 
+        const ctx = drawingCanvas?.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, drawingCanvas!.width, drawingCanvas!.height); 
     };
-
-    (drawingCanvas as any).clear = () => { drawingData = []; ctx.clearRect(0, 0, drawingCanvas!.width, drawingCanvas!.height); };
     (drawingCanvas as any).setColor = (c: string) => { currentColor = c; };
 }
 
@@ -390,6 +457,7 @@ function createRecordingController() {
             <button class="oneclick-tool" id="oneclick-tool-pencil" title="Pencil" style="background:none; border:none; color:white; padding: 6px; border-radius: 6px; cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
             <button class="oneclick-tool" id="oneclick-tool-arrow" title="Arrow" style="background:none; border:none; color:white; padding: 6px; border-radius: 6px; cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 14 0"/><path d="m12 5 7 7-7 7"/></svg></button>
             <button class="oneclick-tool" id="oneclick-tool-rect" title="Rectangle" style="background:none; border:none; color:white; padding: 6px; border-radius: 6px; cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></button>
+            <button class="oneclick-tool" id="oneclick-tool-text" title="Text" style="background:none; border:none; color:white; padding: 6px; border-radius: 6px; cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg></button>
             <button id="oneclick-tool-clear" title="Clear All" style="background:none; border:none; color:#ff4444; padding: 6px; border-radius: 6px; cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
         </div>
         <div style="display: flex; gap: 8px;">
@@ -426,6 +494,7 @@ function createRecordingController() {
     document.getElementById('oneclick-tool-pencil')?.addEventListener('click', () => { currentTool = currentTool === 'pencil' ? 'none' : 'pencil'; updateToolUI(); });
     document.getElementById('oneclick-tool-arrow')?.addEventListener('click', () => { currentTool = currentTool === 'arrow' ? 'none' : 'arrow'; updateToolUI(); });
     document.getElementById('oneclick-tool-rect')?.addEventListener('click', () => { currentTool = currentTool === 'rect' ? 'none' : 'rect'; updateToolUI(); });
+    document.getElementById('oneclick-tool-text')?.addEventListener('click', () => { currentTool = currentTool === 'text' ? 'none' : 'text'; updateToolUI(); });
     document.getElementById('oneclick-tool-clear')?.addEventListener('click', () => { (drawingCanvas as any).clear(); });
 
     const pauseBtn = document.getElementById('oneclick-pause');
@@ -464,26 +533,45 @@ function cleanupRecording() {
 async function startRecording() {
     const overlay = document.createElement('div');
     overlay.id = 'oneclick-ready-overlay';
-    overlay.style.cssText = `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(13, 15, 20, 0.95); color: white; padding: 32px; border-radius: 20px; z-index: ${MAX_Z_INDEX} !important; font-family: sans-serif; box-shadow: 0 8px 32px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1); text-align: center; backdrop-filter: blur(10px);`;
-    overlay.innerHTML = `
-        <div style="margin-bottom: 20px;">
-            <div style="width: 48px; height: 48px; background: #ff4444; border-radius: 50%; display: flex; align-items: center; justify-center; margin: 0 auto 16px;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="margin: 0 auto;"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
-            </div>
-            <h3 style="margin: 0 0 8px; font-size: 20px;">Ready to Record?</h3>
-            <p style="margin: 0; color: rgba(255,255,255,0.6); font-size: 14px;">Select the screen or window you want to capture.</p>
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+        z-index: ${MAX_Z_INDEX} !important; font-family: "Outfit", "Inter", sans-serif;
+    `;
+    
+    const card = document.createElement('div');
+    card.style.cssText = `
+        background: #0d0f14; border: 1px solid rgba(255,255,255,0.1);
+        padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        text-align: center; max-width: 400px; width: 90%;
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    `;
+
+    card.innerHTML = `
+        <style>
+            @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(255, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); } }
+        </style>
+        <div style="width: 64px; height: 64px; background: #ff4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pulse-red 2s infinite;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
         </div>
+        <h3 style="margin: 0 0 12px; font-size: 24px; font-weight: 700; color: white; letter-spacing: -0.02em;">Ready to Record?</h3>
+        <p style="margin: 0 0 32px; color: rgba(255,255,255,0.5); font-size: 16px; line-height: 1.5;">Select the screen or window you want to capture and start creating.</p>
         <div style="display: flex; gap: 12px; justify-content: center;">
-            <button id="oneclick-start-record-btn" style="background: #ff4444; color: white; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px;">Start Recording</button>
-            <button id="oneclick-cancel-record-btn" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 15px;">Cancel</button>
+            <button id="oneclick-start-record-btn" style="flex: 1; background: #ff4444; color: white; border: none; padding: 14px 24px; border-radius: 14px; cursor: pointer; font-weight: 600; font-size: 16px; transition: all 0.2s;">Start Recording</button>
+            <button id="oneclick-cancel-record-btn" style="flex: 1; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 14px 24px; border-radius: 14px; cursor: pointer; font-weight: 500; font-size: 16px; transition: all 0.2s;">Cancel</button>
         </div>
     `;
+    overlay.appendChild(card);
     document.body.appendChild(overlay);
 
     return new Promise<void>((resolve) => {
         document.getElementById('oneclick-start-record-btn')?.addEventListener('click', async () => {
-            document.body.removeChild(overlay);
+            const overlay = document.getElementById('oneclick-ready-overlay');
+            if (overlay) document.body.removeChild(overlay);
             try {
+                chrome.storage.local.set({ isRecording: true });
                 currentStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                 mediaRecorder = new MediaRecorder(currentStream);
                 recordedChunks = [];
@@ -492,47 +580,69 @@ async function startRecording() {
                     const blob = new Blob(recordedChunks, { type: 'video/webm' });
                     const reader = new FileReader();
                     reader.onload = () => {
-                        chrome.storage.local.set({ capturedVideo: reader.result as string }, () => {
-                            chrome.runtime.sendMessage({ action: "openStudio" });
+                        chrome.storage.local.set({ capturedVideo: reader.result, isRecording: false }, () => {
+                            chrome.runtime.sendMessage({ action: "openRecordStudio", videoUrl: reader.result });
                         });
                     };
                     reader.readAsDataURL(blob);
-                    currentStream?.getTracks().forEach(t => t.stop());
+                    cleanupRecording();
+                    chrome.runtime.sendMessage({ action: "stopRecording" });
                 };
                 mediaRecorder.start();
                 createRecordingController();
                 resolve();
-            } catch (err) { console.error("Recording failed:", err); resolve(); }
+            } catch (err) {
+                console.error("Recording failed:", err);
+                chrome.storage.local.set({ isRecording: false });
+            }
         });
-        document.getElementById('oneclick-cancel-record-btn')?.addEventListener('click', () => { document.body.removeChild(overlay); resolve(); });
+        document.getElementById('oneclick-cancel-record-btn')?.addEventListener('click', () => {
+            const overlay = document.getElementById('oneclick-ready-overlay');
+            if (overlay) document.body.removeChild(overlay);
+        });
     });
 }
 
-chrome.runtime.onMessage.addListener((request) => {
-    if (request.action === "startSelection") createSelectionLayer();
-    else if (request.action === "startRecording") startRecording();
-    else if (request.action === "startFullPageCapture") captureFullPage();
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "startSelection") {
+        createSelectionLayer();
+    } 
+    else if (request.action === "startFullPage") {
+        captureFullPage();
+    }
+    else if (request.action === "startRecording") {
+        startRecording();
+    }
+    else if (request.action === "stopRecording") {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        cleanupRecording();
+    }
     else if (request.action === "setDrawingTool") {
-        // Initialize drawing canvas if not already present
         if (!drawingCanvas) initDrawingCanvas();
-        
         const toolMap: Record<string, typeof currentTool> = {
-            'pencil': 'pencil',
-            'arrow': 'arrow',
-            'rectangle': 'rect',
-            'select': 'none',
-            'text': 'none',
-            'comment': 'none',
+            'pencil': 'pencil', 'arrow': 'arrow', 'rectangle': 'rect', 'text': 'text', 'select': 'none',
         };
         currentTool = toolMap[request.tool] || 'none';
-        
         if (drawingCanvas) {
-            drawingCanvas.style.pointerEvents = currentTool !== 'none' ? 'auto' : 'none';
+            drawingCanvas.style.pointerEvents = currentTool === 'none' ? 'none' : 'auto';
         }
+    }
+    else if (request.action === "clearDrawingCanvas") {
+        if (drawingCanvas) (drawingCanvas as any).clear();
+    }
+    else if (request.action === "syncDrawing") {
+        if (!drawingCanvas) initDrawingCanvas();
+        drawingData = request.drawingData || [];
+        currentColor = request.currentColor || '#FF0000'; // Default color if not provided
+        redrawAll();
+    }
+});
 
-        // Update color if provided
-        if (request.color && drawingCanvas) {
-            (drawingCanvas as any).setColor?.(request.color);
-        }
+// Auto-init if recording is active globally
+chrome.storage.local.get(['isRecording'], (res) => {
+    if (res.isRecording) {
+        createRecordingController();
     }
 });
