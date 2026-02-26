@@ -76,7 +76,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     const canvas = new Canvas("editor-canvas", {
       width: container.clientWidth,
       height: container.clientHeight,
-      backgroundColor: "#0d0f14",
+      backgroundColor: "transparent",
       selection: true,
     });
     canvasRef.current = canvas;
@@ -503,10 +503,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
         }),
       });
       canvas.clear();
-      // Keep background color when loading new image
-      const bgColor = canvas.backgroundColor;
       canvas.add(fabricImage);
-      canvas.set({ backgroundColor: bgColor });
       canvas.renderAll();
       setHasImage(true);
       saveHistory(); // Log image load

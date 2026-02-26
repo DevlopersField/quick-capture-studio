@@ -47,62 +47,64 @@ function toggleFixedElements(filter: 'all' | 'headerOnly' | 'footerOnly' | 'none
 
 async function captureFullPage() {
     const originalScrollPos = { x: window.scrollX, y: window.scrollY };
-    const documentHeight = Math.max(
+    // Use Math.ceil to prevent sub-pixel cutoff at the bottom/right
+    const documentHeight = Math.ceil(Math.max(
         document.body.scrollHeight, document.documentElement.scrollHeight,
         document.body.offsetHeight, document.documentElement.offsetHeight,
         document.body.clientHeight, document.documentElement.clientHeight
-    );
-    const documentWidth = Math.max(
+    ));
+    const documentWidth = Math.ceil(Math.max(
         document.body.scrollWidth, document.documentElement.scrollWidth,
         document.body.offsetWidth, document.documentElement.offsetWidth,
         document.body.clientWidth, document.documentElement.clientWidth
-    );
+    ));
 
     const viewportHeight = window.innerHeight;
     const scale = window.devicePixelRatio;
     const canvas = document.createElement('canvas');
-    canvas.width = documentWidth * scale;
-    canvas.height = documentHeight * scale;
+    canvas.width = Math.round(documentWidth * scale);
+    canvas.height = Math.round(documentHeight * scale);
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const overlay = document.createElement('div');
     overlay.id = 'oneclick-progress-overlay';
-    overlay.style.cssText = `position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 12px 20px; border-radius: 12px; z-index: ${MAX_Z_INDEX} !important; font-family: sans-serif; pointer-events: none; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); display: none;`; // Hidden by default
+    overlay.style.cssText = `position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 12px 20px; border-radius: 12px; z-index: ${MAX_Z_INDEX} !important; font-family: sans-serif; pointer-events: none; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); display: none;`;
     document.body.appendChild(overlay);
 
     const originalOverflow = document.documentElement.style.overflow;
     document.documentElement.style.setProperty('overflow', 'hidden', 'important');
 
-    const scrollOverlap = 100;
-    const scrollStep = viewportHeight - scrollOverlap;
+    const scrollStep = Math.floor(viewportHeight * 0.9); // Use 90% step for safety overlap
+    const scrollLimit = Math.max(0, documentHeight - viewportHeight);
 
-    let currentY = 0;
     const scrollSteps = [];
-    while (currentY < documentHeight) {
-        scrollSteps.push(currentY);
-        if (currentY + viewportHeight >= documentHeight) break;
-        currentY += scrollStep;
+    let curr = 0;
+    while (curr < scrollLimit) {
+        scrollSteps.push(curr);
+        curr += scrollStep;
     }
+    scrollSteps.push(scrollLimit); // Always include the bottom
 
-    // Ensure last step is exactly at the bottom if not already
-    if (scrollSteps[scrollSteps.length - 1] + viewportHeight < documentHeight) {
-        scrollSteps.push(documentHeight - viewportHeight);
-    }
+    let lastCanvasY = 0;
 
     for (let i = 0; i < scrollSteps.length; i++) {
-        const y = Math.floor(scrollSteps[i]); // Force integer scroll
-        window.scrollTo(0, y);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Stability wait
+        const targetY = scrollSteps[i];
+        window.scrollTo(0, targetY);
+        // Wait for scroll and rendering stabilization
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        const actualY = window.scrollY;
 
         let filter: 'all' | 'headerOnly' | 'footerOnly' | 'none' = 'all';
         if (i === 0) filter = 'headerOnly';
         else if (i === scrollSteps.length - 1) filter = 'footerOnly';
 
         toggleFixedElements(filter, true);
-        await new Promise(resolve => setTimeout(resolve, 800)); // Fixed element sync wait
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-        overlay.style.setProperty('visibility', 'hidden', 'important');
+        // Hide UI elements
+        if (selectionLayer) selectionLayer.style.setProperty('display', 'none', 'important');
         if (recorderWidget) recorderWidget.style.setProperty('visibility', 'hidden', 'important');
         if (drawingCanvas) drawingCanvas.style.setProperty('visibility', 'hidden', 'important');
 
@@ -110,7 +112,8 @@ async function captureFullPage() {
             chrome.runtime.sendMessage({ action: "captureVisibleTab" }, (response) => resolve(response.dataUrl));
         });
 
-        overlay.style.setProperty('visibility', 'visible', 'important');
+        // Restore UI visibility
+        if (selectionLayer) selectionLayer.style.removeProperty('display');
         if (recorderWidget) recorderWidget.style.setProperty('visibility', 'visible', 'important');
         if (drawingCanvas) drawingCanvas.style.setProperty('visibility', 'visible', 'important');
 
@@ -120,33 +123,32 @@ async function captureFullPage() {
             imgEl.src = dataUrl;
         });
 
+        // Calculate where to start drawing this segment to avoid overlaps
+        // lastCanvasY tracks how much of the page height we've already filled
         let sourceY = 0;
-        let destY = y;
+        let destY = actualY;
         let drawHeight = viewportHeight;
 
-        if (i > 0) {
-            // Because we overlapped by 100px, the first 100px of this capture 
-            // are already on the canvas from the previous capture.
-            const prevEnd = scrollSteps[i - 1] + viewportHeight;
-            if (y < prevEnd) {
-                const overlap = prevEnd - y;
-                sourceY = overlap; // Start drawing from after the overlap in the source image
-                destY = y + overlap; // Place it after the already drawn part
-                drawHeight = viewportHeight - overlap;
-            }
+        if (actualY < lastCanvasY) {
+            const overlap = lastCanvasY - actualY;
+            sourceY = overlap;
+            destY = lastCanvasY;
+            drawHeight = viewportHeight - overlap;
         }
 
-        // Clamp to document bottom
-        if (destY + drawHeight > documentHeight) drawHeight = documentHeight - destY;
+        // Final clamp to document height
+        if (destY + drawHeight > documentHeight) {
+            drawHeight = documentHeight - destY;
+        }
 
         if (drawHeight > 0) {
             ctx.drawImage(img,
-                0, Math.round(sourceY * scale), Math.round(img.width), Math.round(drawHeight * scale),
-                0, Math.round(destY * scale), Math.round(img.width), Math.round(drawHeight * scale)
+                0, Math.round(sourceY * scale), img.width, Math.round(drawHeight * scale),
+                0, Math.round(destY * scale), img.width, Math.round(drawHeight * scale)
             );
+            lastCanvasY = destY + drawHeight;
         }
 
-        // overlay.innerText = ... // Removed
         toggleFixedElements('none', false);
     }
 
