@@ -1,8 +1,9 @@
 import { useRef, useCallback, useState, useEffect } from "react";
-import { Camera, MessageCircle } from "lucide-react";
+import { Camera, MessageCircle, Sun, Moon, Monitor } from "lucide-react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useRecorder } from "@/hooks/useRecorder";
 import { usePictureInPicture } from "@/hooks/usePictureInPicture";
+import { useTheme } from "@/hooks/useTheme";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { CommentPanel } from "./CommentPanel";
 import { ExportModal } from "./ExportModal";
@@ -21,10 +22,12 @@ export function EditorWorkspace() {
     activeTool, setActiveTool, comments,
     loadImage, loadImageFromFile, exportPNG, exportPDF,
     deleteSelected, updateComment, hasImage,
+    strokeColor, setStrokeColor,
   } = useCanvas(containerRef);
 
   const recorder = useRecorder();
   const { pipWindow, openPiP, closePiP } = usePictureInPicture();
+  const { theme, setTheme } = useTheme();
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,8 +66,14 @@ export function EditorWorkspace() {
 
   const isRecording = recorder.state === "recording" || recorder.state === "paused";
 
+  const nextTheme = () => {
+    if (theme === "system") setTheme("dark");
+    else if (theme === "dark") setTheme("light");
+    else setTheme("system");
+  };
+
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden relative">
+    <div className="flex h-screen w-full bg-background overflow-hidden relative transition-colors duration-300">
       {/* Floating Logo Badge (top-left) */}
       <div className="absolute top-4 left-4 z-30 flex items-center gap-2 glass-panel rounded-xl px-3 py-2 animate-fade-in">
         <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
@@ -81,17 +90,29 @@ export function EditorWorkspace() {
         )}
       </div>
 
-      {/* Comment Panel Toggle (top-right) */}
-      <button
-        onClick={() => setShowComments(prev => !prev)}
-        className={`absolute top-4 right-4 z-30 flex items-center gap-1.5 glass-panel rounded-xl px-3 py-2 transition-all duration-200 hover:scale-[1.03] animate-fade-in ${showComments ? "border-primary/40 text-primary" : "text-muted-foreground hover:text-foreground"
-          }`}
-      >
-        <MessageCircle size={16} />
-        <span className="text-sm font-medium">
-          {comments.length > 0 ? comments.length : ""}
-        </span>
-      </button>
+      {/* Top Right Actions (Theme Toggle & Comments) */}
+      <div className="absolute top-4 right-4 z-30 flex items-center gap-2 animate-fade-in">
+        <button
+          onClick={nextTheme}
+          title={`Active Theme: ${theme}`}
+          className="flex items-center justify-center w-10 h-10 glass-panel rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200"
+        >
+          {theme === "system" && <Monitor size={18} />}
+          {theme === "dark" && <Moon size={18} />}
+          {theme === "light" && <Sun size={18} />}
+        </button>
+
+        <button
+          onClick={() => setShowComments(prev => !prev)}
+          className={`flex items-center gap-1.5 glass-panel rounded-xl px-3 h-10 transition-all duration-200 hover:scale-[1.03] ${showComments ? "border-primary/40 text-primary shadow-lg shadow-primary/10" : "text-muted-foreground hover:text-foreground"
+            }`}
+        >
+          <MessageCircle size={18} />
+          <span className="text-sm font-medium">
+            {comments.length > 0 ? comments.length : ""}
+          </span>
+        </button>
+      </div>
 
       {/* Canvas Area */}
       <div className="flex-1 flex flex-col relative">
@@ -101,14 +122,14 @@ export function EditorWorkspace() {
           {/* Empty State */}
           {!hasImage && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-              <div className="flex flex-col items-center gap-5 text-muted-foreground animate-fade-in">
-                <div className="w-20 h-20 rounded-2xl bg-secondary/30 flex items-center justify-center border border-border/30">
+              <div className="flex flex-col items-center gap-5 text-muted-foreground animate-fade-in text-center px-6">
+                <div className="w-20 h-20 rounded-2xl bg-secondary/30 flex items-center justify-center border border-border/30 shadow-inner">
                   <Camera size={32} className="text-primary/40" />
                 </div>
-                <div className="text-center">
-                  <p className="text-base font-medium text-foreground/50">No capture loaded</p>
-                  <p className="text-sm text-muted-foreground/60 mt-1.5 max-w-xs leading-relaxed">
-                    Upload an image, use Mock Capture, or start a screen recording to get started
+                <div>
+                  <p className="text-base font-semibold text-foreground/70">No capture loaded</p>
+                  <p className="text-sm text-muted-foreground/50 mt-1.5 max-w-xs leading-relaxed">
+                    Upload an image or start a screen recording to begin annotating
                   </p>
                 </div>
               </div>
@@ -143,6 +164,8 @@ export function EditorWorkspace() {
         onMockCapture={() => loadImage(MOCK_IMAGE)}
         onExport={() => setShowExport(true)}
         hasPiP={!!pipWindow}
+        strokeColor={strokeColor}
+        onColorChange={setStrokeColor}
       />
 
       {/* PiP Controller (rendered in separate window) */}
@@ -152,6 +175,8 @@ export function EditorWorkspace() {
           activeTool={activeTool}
           onToolChange={handleToolChange}
           onDelete={deleteSelected}
+          strokeColor={strokeColor}
+          onColorChange={setStrokeColor}
         />
       )}
 

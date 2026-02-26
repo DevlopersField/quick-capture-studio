@@ -13,6 +13,7 @@ interface CommentPin {
 export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) {
   const canvasRef = useRef<Canvas | null>(null);
   const [activeTool, setActiveTool] = useState<ToolType>("select");
+  const [strokeColor, setStrokeColor] = useState("#00d4ff");
   const [comments, setComments] = useState<CommentPin[]>([]);
   const commentCountRef = useRef(0);
   const [hasImage, setHasImage] = useState(false);
@@ -60,6 +61,13 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     };
   }, [containerRef]);
 
+  // Handle strokeColor change for active pencil brush
+  useEffect(() => {
+    if (canvasRef.current && canvasRef.current.isDrawingMode && canvasRef.current.freeDrawingBrush) {
+      canvasRef.current.freeDrawingBrush.color = strokeColor;
+    }
+  }, [strokeColor]);
+
   // Tool switching
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -68,7 +76,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     canvas.isDrawingMode = activeTool === "pencil";
     if (activeTool === "pencil") {
       const brush = new PencilBrush(canvas);
-      brush.color = "#00d4ff";
+      brush.color = strokeColor;
       brush.width = 2;
       canvas.freeDrawingBrush = brush;
     }
@@ -99,7 +107,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
         startY = pointer.y;
         rect = new Rect({
           left: startX, top: startY, width: 0, height: 0,
-          fill: "transparent", stroke: "#00d4ff", strokeWidth: 2,
+          fill: "transparent", stroke: strokeColor, strokeWidth: 2,
           rx: 4, ry: 4,
         });
         canvas.add(rect);
@@ -122,14 +130,13 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     if (activeTool === "arrow") {
       let isDrawing = false;
       let line: Line | null = null;
-      let head: any = null;
 
       canvas.on("mouse:down", (opt) => {
         if (opt.target) return;
         isDrawing = true;
         const pointer = canvas.getScenePoint(opt.e);
         line = new Line([pointer.x, pointer.y, pointer.x, pointer.y], {
-          stroke: "#00d4ff", strokeWidth: 2, selectable: false, evented: false,
+          stroke: strokeColor, strokeWidth: 2, selectable: false, evented: false,
         });
         canvas.add(line);
       });
@@ -152,17 +159,17 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
           x2, y2,
           x2 - headLen * Math.cos(angle - Math.PI / 6),
           y2 - headLen * Math.sin(angle - Math.PI / 6),
-        ], { stroke: "#00d4ff", strokeWidth: 2, selectable: false, evented: false });
+        ], { stroke: strokeColor, strokeWidth: 2, selectable: false, evented: false });
         const h2 = new Line([
           x2, y2,
           x2 - headLen * Math.cos(angle + Math.PI / 6),
           y2 - headLen * Math.sin(angle + Math.PI / 6),
-        ], { stroke: "#00d4ff", strokeWidth: 2, selectable: false, evented: false });
+        ], { stroke: strokeColor, strokeWidth: 2, selectable: false, evented: false });
 
         // Group them
         canvas.remove(line);
         const group = new Group([
-          new Line([x1, y1, x2, y2], { stroke: "#00d4ff", strokeWidth: 2 }),
+          new Line([x1, y1, x2, y2], { stroke: strokeColor, strokeWidth: 2 }),
           h1, h2,
         ], { selectable: true });
         canvas.add(group);
@@ -177,7 +184,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
         const pointer = canvas.getScenePoint(opt.e);
         const text = new IText("Type here", {
           left: pointer.x, top: pointer.y,
-          fontSize: 16, fill: "#ffffff",
+          fontSize: 16, fill: strokeColor,
           fontFamily: "Inter, sans-serif",
           editable: true,
         });
@@ -197,7 +204,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
 
         // Pin circle
         const circle = new Circle({
-          radius: 14, fill: "#4f7df9", stroke: "#00d4ff", strokeWidth: 2,
+          radius: 14, fill: "#4f7df9", stroke: strokeColor, strokeWidth: 2,
           originX: "center", originY: "center",
         });
         const label = new Textbox(String(num), {
@@ -216,7 +223,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
         setActiveTool("select");
       });
     }
-  }, [activeTool]);
+  }, [activeTool, strokeColor]);
 
   const loadImage = useCallback(async (url: string) => {
     const canvas = canvasRef.current;
@@ -289,5 +296,6 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     canvasRef, activeTool, setActiveTool, comments,
     loadImage, loadImageFromFile, exportPNG, exportPDF,
     deleteSelected, updateComment, hasImage,
+    strokeColor, setStrokeColor,
   };
 }

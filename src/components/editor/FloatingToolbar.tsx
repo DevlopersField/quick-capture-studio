@@ -26,7 +26,17 @@ interface Props {
   onMockCapture: () => void;
   onExport: () => void;
   hasPiP?: boolean;
+  strokeColor: string;
+  onColorChange: (color: string) => void;
 }
+
+const colors = [
+  { label: "Cyan", value: "#00d4ff" },
+  { label: "Purple", value: "#a855f7" },
+  { label: "Pink", value: "#ec4899" },
+  { label: "Orange", value: "#f97316" },
+  { label: "White", value: "#ffffff" },
+];
 
 const tools: { id: ToolType; icon: React.ElementType; label: string }[] = [
   { id: "select", icon: MousePointer2, label: "Select (V)" },
@@ -43,6 +53,7 @@ export function FloatingToolbar({
   onRecordStart, onRecordStop, onRecordPause, onRecordResume,
   onRecordToggleMute, formatTime,
   onUpload, onMockCapture, onExport,
+  strokeColor, onColorChange,
   hasPiP = false,
 }: Props) {
   const isRecording = recorderState === "recording" || recorderState === "paused";
@@ -54,6 +65,20 @@ export function FloatingToolbar({
         {/* === Annotation Tools (Left) === */}
         {!hasPiP ? (
           <div className="flex items-center gap-0.5 animate-fade-in">
+            {/* Color Dots */}
+            <div className="flex items-center gap-1.5 px-2 mr-1 border-r border-border/40">
+              {colors.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => onColorChange(c.value)}
+                  title={c.label}
+                  className={`w-5 h-5 rounded-full border-2 transition-all duration-200 hover:scale-110 ${strokeColor === c.value ? "border-white scale-110 shadow-lg shadow-white/20" : "border-transparent"
+                    }`}
+                  style={{ backgroundColor: c.value }}
+                />
+              ))}
+            </div>
+
             {tools.map(({ id, icon: Icon, label }) => (
               <button
                 key={id}
@@ -76,8 +101,11 @@ export function FloatingToolbar({
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground animate-fade-in">
-            Mini tools active in floating window
+          <div className="flex items-center gap-3 px-3 py-1.5 text-xs text-muted-foreground animate-fade-in">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: strokeColor }} />
+              Mini tools active in floating window
+            </div>
           </div>
         )}
 

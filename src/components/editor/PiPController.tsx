@@ -6,18 +6,26 @@ import type { ToolType } from "@/hooks/useCanvas";
 
 interface Props {
     pipWindow: Window;
-    // Canvas State only
     activeTool: ToolType;
     onToolChange: (tool: ToolType) => void;
     onDelete: () => void;
+    strokeColor: string;
+    onColorChange: (color: string) => void;
 }
+
+const colors = [
+    { label: "Cyan", value: "#00d4ff" },
+    { label: "Purple", value: "#a855f7" },
+    { label: "Pink", value: "#ec4899" },
+    { label: "Orange", value: "#f97316" },
+];
 
 const annotationTools: { id: ToolType; icon: any; label: string }[] = [
     { id: "select", icon: MousePointer2, label: "Select (V)" },
     { id: "rectangle", icon: Square, label: "Rectangle (R)" },
     { id: "arrow", icon: MoveRight, label: "Arrow (A)" },
     { id: "pencil", icon: Pencil, label: "Pencil (P)" },
-    { id: "text", icon: Type, label: "Text (T)" },
+    { id: "text", icon: Text, label: "Text (T)" },
     { id: "comment", icon: MessageCircle, label: "Comment Pin (C)" },
 ];
 
@@ -28,17 +36,19 @@ const annotationTools: { id: ToolType; icon: any; label: string }[] = [
 export function PiPController({
     pipWindow,
     activeTool, onToolChange, onDelete,
+    strokeColor, onColorChange,
 }: Props) {
     return createPortal(
         <div
             style={{
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "4px",
                 width: "100%",
                 height: "100%",
-                padding: "8px 12px",
+                padding: "6px 10px",
                 background: "hsl(228 14% 8%)",
                 fontFamily: "'Inter', system-ui, sans-serif",
                 boxSizing: "border-box",
@@ -46,6 +56,25 @@ export function PiPController({
                 borderRadius: "12px",
             }}
         >
+            {/* Color Selection Row (Minimal) */}
+            <div style={{ display: "flex", gap: "6px", marginBottom: "2px" }}>
+                {colors.map(c => (
+                    <button
+                        key={c.value}
+                        onClick={() => onColorChange(c.value)}
+                        style={{
+                            width: "10px",
+                            height: "10px",
+                            borderRadius: "50%",
+                            backgroundColor: c.value,
+                            border: strokeColor === c.value ? "1.5px solid white" : "none",
+                            cursor: "pointer",
+                            padding: 0,
+                        }}
+                    />
+                ))}
+            </div>
+
             {/* Tool Icons Row */}
             <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
                 {annotationTools.map(({ id, icon: Icon, label }) => (
