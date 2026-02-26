@@ -482,19 +482,36 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     }
   }, []);
 
-  const loadImage = useCallback(async (url: string) => {
+  const loadImage = useCallback(async (url: string, append = false) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     try {
       const fabricImage = await FabricImage.fromURL(url, { crossOrigin: "anonymous" });
-      fabricImage.set({ selectable: false, evented: false });
-      const scaleX = canvas.width! / fabricImage.width!;
-      const scaleY = canvas.height! / fabricImage.height!;
-      const scale = Math.min(scaleX, scaleY, 1);
-      fabricImage.scale(scale);
+
+      if (!append) {
+        canvas.clear();
+        fabricImage.set({ selectable: false, evented: false });
+        const scaleX = canvas.width! / fabricImage.width!;
+        const scaleY = canvas.height! / fabricImage.height!;
+        const scale = Math.min(scaleX, scaleY, 1);
+        fabricImage.scale(scale);
+        fabricImage.set({
+          left: (canvas.width! - fabricImage.width! * scale) / 2,
+          top: (canvas.height! - fabricImage.height! * scale) / 2,
+        });
+      } else {
+        // For appended images, make them selectable and place them slightly offset
+        fabricImage.set({
+          selectable: true,
+          evented: true,
+          left: 100 + (canvas.getObjects().length * 20),
+          top: 100 + (canvas.getObjects().length * 20)
+        });
+        const scale = Math.min(400 / fabricImage.width!, 400 / fabricImage.height!, 1);
+        fabricImage.scale(scale);
+      }
+
       fabricImage.set({
-        left: (canvas.width! - fabricImage.width! * scale) / 2,
-        top: (canvas.height! - fabricImage.height! * scale) / 2,
         shadow: new Shadow({
           color: "rgba(0,0,0,0.3)",
           blur: 20,
@@ -502,20 +519,21 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
           offsetY: 8,
         }),
       });
-      canvas.clear();
+
       canvas.add(fabricImage);
+      if (append) canvas.setActiveObject(fabricImage);
       canvas.renderAll();
       setHasImage(true);
-      saveHistory(); // Log image load
+      saveHistory();
     } catch (e) {
       console.error("Failed to load image", e);
     }
   }, [saveHistory]);
 
-  const loadImageFromFile = useCallback((file: File) => {
+  const loadImageFromFile = useCallback((file: File, append = false) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (e.target?.result) loadImage(e.target.result as string);
+      if (e.target?.result) loadImage(e.target.result as string, append);
     };
     reader.readAsDataURL(file);
   }, [loadImage]);

@@ -14,6 +14,7 @@ import { PiPController } from "./PiPController";
 export function EditorWorkspace() {
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const addImageInputRef = useRef<HTMLInputElement>(null);
   const [showExport, setShowExport] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [searchParams] = useSearchParams();
@@ -75,7 +76,18 @@ export function EditorWorkspace() {
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) loadImageFromFile(file);
+    if (file) {
+      loadImageFromFile(file);
+      e.target.value = ""; // Reset for same file re-upload
+    }
+  }, [loadImageFromFile]);
+
+  const handleAddImage = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      loadImageFromFile(file, true);
+      e.target.value = ""; // Reset
+    }
   }, [loadImageFromFile]);
 
   // When comment tool is selected, auto-open the comment panel
@@ -137,15 +149,51 @@ export function EditorWorkspace() {
 
       {/* Top Right Actions (Theme Toggle & Comments) */}
       <div className="absolute top-4 right-4 z-30 flex items-center gap-2 animate-fade-in">
-        <button
-          onClick={nextTheme}
-          title={`Active Theme: ${theme}`}
-          className="flex items-center justify-center w-10 h-10 glass-panel rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200"
-        >
-          {theme === "system" && <Monitor size={18} />}
-          {theme === "dark" && <Moon size={18} />}
-          {theme === "light" && <Sun size={18} />}
-        </button>
+        {/* Mode Toggle & Add Image */}
+        <div className="flex items-center gap-1.5 glass-panel rounded-xl p-1 shadow-sm border border-border/40">
+          <input
+            type="file"
+            ref={addImageInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={handleAddImage}
+          />
+          <button
+            onClick={() => addImageInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-semibold transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-secondary/50 group"
+            title="Add another image to the canvas"
+          >
+            <Camera size={14} className="group-hover:text-primary transition-colors" />
+            <span>Add Image</span>
+          </button>
+
+          <div className="w-[1px] h-4 bg-border/40 mx-1" />
+
+          <button
+            onClick={() => setTheme("light")}
+            className={`p-1.5 rounded-lg transition-all duration-200 ${theme === "light" ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            title="Light Mode"
+          >
+            <Sun size={16} />
+          </button>
+          <button
+            onClick={() => setTheme("dark")}
+            className={`p-1.5 rounded-lg transition-all duration-200 ${theme === "dark" ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            title="Dark Mode"
+          >
+            <Moon size={16} />
+          </button>
+          <button
+            onClick={() => setTheme("system")}
+            className={`p-1.5 rounded-lg transition-all duration-200 ${theme === "system" ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            title="System Mode"
+          >
+            <Monitor size={16} />
+          </button>
+        </div>
 
         <button
           onClick={() => setShowComments(prev => !prev)}

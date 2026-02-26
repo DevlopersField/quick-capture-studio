@@ -133,25 +133,23 @@
   }
 
   .canvas-grid-pattern {
-    background-size: 20px 20px, 100px 100px;
+    background-size: 10px 10px, 50px 50px;
     background-image:
-      linear-gradient(to right, hsl(var(--border) / 0.1) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border) / 0.1) 1px, transparent 1px),
-      linear-gradient(to right, hsl(var(--border) / 0.25) 1.5px, transparent 1.5px),
-      linear-gradient(to bottom, hsl(var(--border) / 0.25) 1.5px, transparent 1.5px);
+      linear-gradient(to right, hsl(var(--border) / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.05) 1px, transparent 1px),
+      linear-gradient(to right, hsl(var(--border) / 0.15) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.15) 1px, transparent 1px);
     background-position: center center;
     background-color: #f8fafc;
-    /* Professional light gray background */
   }
 
   .dark .canvas-grid-pattern {
     background-color: #0d0f14;
-    /* Deep studio dark */
     background-image:
-      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(to right, rgba(255, 255, 255, 0.06) 1.5px, transparent 1.5px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1.5px, transparent 1.5px);
+      linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   }
 }
 
