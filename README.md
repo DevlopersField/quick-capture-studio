@@ -1,62 +1,61 @@
-# 1ClickCapture - Quick Capture Studio
+# 1ClickCapture - Quick Capture Studio 🚀
 
-1ClickCapture is a powerful, web-based tool designed for instant screen capturing, live recording, and real-time annotation. Whether you need to highlight a bug, create a tutorial, or provide feedback on a design, 1ClickCapture simplifies the process with a seamless, high-performance interface.
-
-## ✨ Key Features
-
-- **Live Screen Recording**: Record your entire screen or specific windows with optional microphone audio.
-- **Real-time Annotations**: Draw shapes, add arrows, write text, and drop comment pins directly on your captures.
-- **Picture-in-Picture (PiP) Mode**: A sticky floating toolbar that stays with you even when you switch tabs, allowing for live annotation during recordings.
-- **Multiple Export Options**: Save your work as high-quality PNG images, PDF documents, or WebM video files.
-- **Dark Mode Support**: A sleek, glassmorphic UI that adapts to your system preferences.
+**1ClickCapture** is a professional-grade browser extension and studio designed for high-performance screen capturing, live recording, and real-time annotation. Built for developers, designers, and educators who need a seamless way to communicate visual ideas.
 
 ---
 
-## 🚀 How to Use
+## 💎 Premium Features
 
-### 1. Annotating an Image
-- **Upload**: Click the **Upload** icon in the toolbar to import any image.
-- **Annotate**: Use the tools (Rectangle, Arrow, Pencil, Text, Comment) to mark up the image.
-- **Customize**: Change the stroke color using the color picker on the left of the toolbar.
-- **Export**: Click **Export** to save as PNG, PDF, or copy directly to your clipboard.
+### 🎥 Advanced Screen Recording
+- **Universal Toolbar**: A sleek, glassmorphic toolbar that follows you across every tab and window during your recording.
+- **Cross-Window Sync**: Annotation tools (Pencil, Arrow, Text, Shapes) and colors stay synced instantly across all open browser windows.
+- **Dual Stop Functionality**: Effortlessly stop recordings via our custom toolbar or the browser's native "Stop sharing" button.
+- **Loom-Style Workflow**: On stop, you are instantly redirected to the Studio with an auto-popup ready for preview, download, or sharing.
 
-### 2. Screen Recording
-- **Start**: Click the **Record** button. Choose the screen or window you wish to capture.
-- **Control**: Use the floating controls to **Pause**, **Resume**, or **Mute** your microphone.
-- **Finish**: Click **Stop** to automatically open the export modal where you can preview and download your video.
+### 📸 Pro Full-Page Capture
+- **Pixel-Perfect Stitching**: Advanced engine that handles sticky headers, deep footers, and dynamic layouts without "seams" or gaps.
+- **Self-Healing Layouts**: Automatically handles scroll buffers to ensure every pixel of deep, dynamic content is captured.
+- **High-Resolution Output**: Export as high-quality PNG or multi-page PDF documents.
 
-### 🎯 Pro Tip: Capture & Record Simultaneously
-You can record your screen and annotate live at the same time using the **Sticky PiP Toolbar**:
-1. Start a **Screen Recording**.
-2. A small floating **Picture-in-Picture (PiP)** window will appear automatically.
-3. Switch to the tab or application you are recording.
-4. Use the annotation tools in the PiP window to draw on your "canvas" (the screen being recorded).
-5. Your live annotations will be captured as part of the video recording!
+### 🎨 Precision Studio Editor
+- **Figma-Style Navigation**: 
+  - **Zoom**: Pinch-to-zoom or wheel zoom centered at your cursor.
+  - **Pan**: Hold `Space + Drag` or use `Middle-Click Drag`.
+  - **Grid**: Professional design grid with major/minor lines.
+- **Smart Text Tool**: Auto-selects placeholders for instant typing, just like professional design suites.
+- **Multi-Image Support**: Upload and append multiple captures or external assets to a single canvas.
+- **Theme Engine**: Support for Light, Dark, and System themes with a single toggle.
 
 ---
 
-## ⌨️ Keyboard Shortcuts
-
-Speed up your workflow with these essential shortcuts:
+## ⌨️ Pro Shortcuts
 
 | Shortcut | Action |
 | :--- | :--- |
-| `V` | Select / Pointer Tool |
-| `R` | Rectangle Tool |
-| `A` | Arrow Tool |
-| `P` | Pencil / Draw Tool |
-| `T` | Text Tool |
-| `C` | Comment Pin Tool |
-| `Ctrl + Z` | Undo |
-| `Ctrl + Y` | Redo |
-| `Del` / `Backspace` | Delete Selected Object |
+| `Space + Drag` | Pan Workspace |
+| `V` | Select / Pointer |
+| `R` / `A` / `P` | Rect / Arrow / Pencil |
+| `T` / `C` | Text / Comment Pin |
+| `Ctrl + Z / Y` | Undo / Redo |
+| `Del` | Delete Selection |
+| `Shift + Scroll` | Horizontal Pan |
 
 ---
 
-## 🛠️ Built With
+## 🛠️ Technical Architecture
 
-- **React & TypeScript**: For a robust and type-safe application logic.
-- **Fabric.js**: Powering the high-performance canvas annotation engine.
-- **Lucide React**: Beautiful and consistent iconography.
-- **Tailwind CSS**: Modern, responsive, and glassmorphic UI design.
-- **Framer Motion**: Smooth animations and transitions.
+- **Engine**: React 18 + TypeScript + Fabric.js for high-performance canvas ops.
+- **UI System**: Tailwind CSS with Glassmorphism and Framer Motion animations.
+- **Infrastructure**: Chrome Extension Manifest v3, Storage API for global state persistence.
+- **Capture**: MediaRecorder API for video, specialized Canvas stitching for full-page images.
+
+---
+
+## 🚀 Getting Started
+
+1. **Build the extension**: `npm run build`
+2. **Load in Chrome**:
+   - Open `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked" and select the `dist` folder.
+3. **Start Creating**: Click the extension icon to start a capture or recording!
