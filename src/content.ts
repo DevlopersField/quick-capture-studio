@@ -282,9 +282,13 @@ function initDrawingCanvas() {
     if (drawingCanvas) return;
     drawingCanvas = document.createElement('canvas');
     drawingCanvas.id = 'oneclick-drawing-canvas';
-    drawingCanvas.width = window.innerWidth;
-    drawingCanvas.height = window.innerHeight;
-    drawingCanvas.style.cssText = `position: fixed; top: 0; left: 0; pointer-events: none; z-index: ${parseInt(MAX_Z_INDEX) - 1};`;
+    
+    // Use full document size so drawings scroll with the page
+    const docW = Math.max(document.body.scrollWidth, document.documentElement.scrollWidth);
+    const docH = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+    drawingCanvas.width = docW;
+    drawingCanvas.height = docH;
+    drawingCanvas.style.cssText = `position: absolute; top: 0; left: 0; pointer-events: none; z-index: ${parseInt(MAX_Z_INDEX) - 1};`;
     document.body.appendChild(drawingCanvas);
 
     const ctx = drawingCanvas.getContext('2d');
@@ -294,10 +298,15 @@ function initDrawingCanvas() {
     let startX = 0;
     let startY = 0;
     let drawingData: any[] = [];
+    let currentColor = '#00d4ff';
+
+    // Convert viewport mouse coords to absolute page coords
+    const pageX = (e: MouseEvent) => e.clientX + window.scrollX;
+    const pageY = (e: MouseEvent) => e.clientY + window.scrollY;
 
     const drawLine = (x1: number, y1: number, x2: number, y2: number) => {
         ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-        ctx.strokeStyle = '#00d4ff'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.stroke();
+        ctx.strokeStyle = currentColor; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.stroke();
     };
 
     const drawArrow = (x1: number, y1: number, x2: number, y2: number) => {
@@ -307,30 +316,30 @@ function initDrawingCanvas() {
         ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
         ctx.moveTo(x2, y2);
         ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
-        ctx.strokeStyle = '#00d4ff'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.strokeStyle = currentColor; ctx.lineWidth = 4; ctx.stroke();
     };
 
     const drawRect = (x1: number, y1: number, x2: number, y2: number) => {
-        ctx.strokeStyle = '#00d4ff'; ctx.lineWidth = 4;
+        ctx.strokeStyle = currentColor; ctx.lineWidth = 4;
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
     };
 
     window.addEventListener('mousedown', (e) => {
         if (currentTool === 'none') return;
-        isDrawing = true; startX = e.clientX; startY = e.clientY;
+        isDrawing = true; startX = pageX(e); startY = pageY(e);
     });
 
     window.addEventListener('mousemove', (e) => {
         if (!isDrawing || currentTool === 'none') return;
         if (currentTool === 'pencil') {
-            drawLine(startX, startY, e.clientX, e.clientY);
-            startX = e.clientX; startY = e.clientY;
+            drawLine(startX, startY, pageX(e), pageY(e));
+            drawingData.push({ tool: 'pencil-seg', x1: startX, y1: startY, x2: pageX(e), y2: pageY(e), color: currentColor });
+            startX = pageX(e); startY = pageY(e);
         } else {
-            // Preview for shapes
             ctx.clearRect(0, 0, drawingCanvas!.width, drawingCanvas!.height);
             redrawAll();
-            if (currentTool === 'arrow') drawArrow(startX, startY, e.clientX, e.clientY);
-            else if (currentTool === 'rect') drawRect(startX, startY, e.clientX, e.clientY);
+            if (currentTool === 'arrow') drawArrow(startX, startY, pageX(e), pageY(e));
+            else if (currentTool === 'rect') drawRect(startX, startY, pageX(e), pageY(e));
         }
     });
 
@@ -338,18 +347,23 @@ function initDrawingCanvas() {
         if (!isDrawing || currentTool === 'none') return;
         isDrawing = false;
         if (currentTool !== 'pencil') {
-            drawingData.push({ tool: currentTool, x1: startX, y1: startY, x2: e.clientX, y2: e.clientY });
+            drawingData.push({ tool: currentTool, x1: startX, y1: startY, x2: pageX(e), y2: pageY(e), color: currentColor });
         }
     });
 
     const redrawAll = () => {
         drawingData.forEach(d => {
+            const prevColor = currentColor;
+            currentColor = d.color || '#00d4ff';
             if (d.tool === 'arrow') drawArrow(d.x1, d.y1, d.x2, d.y2);
             else if (d.tool === 'rect') drawRect(d.x1, d.y1, d.x2, d.y2);
+            else if (d.tool === 'pencil-seg') drawLine(d.x1, d.y1, d.x2, d.y2);
+            currentColor = prevColor;
         });
     };
 
     (drawingCanvas as any).clear = () => { drawingData = []; ctx.clearRect(0, 0, drawingCanvas!.width, drawingCanvas!.height); };
+    (drawingCanvas as any).setColor = (c: string) => { currentColor = c; };
 }
 
 function createRecordingController() {
@@ -498,4 +512,27 @@ chrome.runtime.onMessage.addListener((request) => {
     if (request.action === "startSelection") createSelectionLayer();
     else if (request.action === "startRecording") startRecording();
     else if (request.action === "startFullPageCapture") captureFullPage();
+    else if (request.action === "setDrawingTool") {
+        // Initialize drawing canvas if not already present
+        if (!drawingCanvas) initDrawingCanvas();
+        
+        const toolMap: Record<string, typeof currentTool> = {
+            'pencil': 'pencil',
+            'arrow': 'arrow',
+            'rectangle': 'rect',
+            'select': 'none',
+            'text': 'none',
+            'comment': 'none',
+        };
+        currentTool = toolMap[request.tool] || 'none';
+        
+        if (drawingCanvas) {
+            drawingCanvas.style.pointerEvents = currentTool !== 'none' ? 'auto' : 'none';
+        }
+
+        // Update color if provided
+        if (request.color && drawingCanvas) {
+            (drawingCanvas as any).setColor?.(request.color);
+        }
+    }
 });

@@ -16,4 +16,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const url = chrome.runtime.getURL(`index.html#/?mode=record&videoUrl=${encodeURIComponent(request.videoUrl)}`);
         chrome.tabs.create({ url });
     }
+
+    if (request.action === "setDrawingTool") {
+        // Forward tool change to all non-extension tabs
+        chrome.tabs.query({}, (tabs) => {
+            tabs.forEach(tab => {
+                if (tab.id && !tab.url?.startsWith("chrome-extension://")) {
+                    chrome.tabs.sendMessage(tab.id, {
+                        action: "setDrawingTool",
+                        tool: request.tool,
+                        color: request.color,
+                    }).catch(() => {});
+                }
+            });
+        });
+    }
 });

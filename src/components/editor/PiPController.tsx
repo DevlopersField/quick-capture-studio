@@ -62,6 +62,28 @@ export function PiPController({
     const [showColors, setShowColors] = useState(false);
     const isRecording = recorderState === "recording" || recorderState === "paused";
 
+    // Send tool change to content scripts on external pages
+    const syncToolToPages = (tool: string, color?: string) => {
+        try {
+            chrome.runtime?.sendMessage({
+                action: "setDrawingTool",
+                tool,
+                color: color || strokeColor,
+            });
+        } catch (e) { /* PiP context may not have chrome API */ }
+    };
+
+    // Override onToolChange to also sync to external pages
+    const handleToolChange = (tool: ToolType) => {
+        onToolChange(tool);
+        syncToolToPages(tool);
+    };
+
+    const handleColorChange = (color: string) => {
+        onColorChange(color);
+        syncToolToPages(activeTool, color);
+    };
+
     const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     const bg = isDark ? "hsl(228 14% 8%)" : "#ffffff";
@@ -139,7 +161,7 @@ export function PiPController({
                         <button
                             key={c.value}
                             onClick={() => {
-                                onColorChange(c.value);
+                                handleColorChange(c.value);
                                 setShowColors(false);
                             }}
                             style={{
@@ -183,7 +205,7 @@ export function PiPController({
                 {annotationTools.map(({ id, icon: Icon, label }) => (
                     <button
                         key={id}
-                        onClick={() => onToolChange(id)}
+                        onClick={() => handleToolChange(id)}
                         title={label}
                         style={btnStyle(activeTool === id)}
                         onMouseEnter={(e) => {
