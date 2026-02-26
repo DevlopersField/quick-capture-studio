@@ -48,15 +48,21 @@ function toggleFixedElements(filter: 'all' | 'headerOnly' | 'footerOnly' | 'none
 async function captureFullPage() {
     const originalScrollPos = { x: window.scrollX, y: window.scrollY };
     // Use Math.ceil to prevent sub-pixel cutoff at the bottom/right
+    // Add a 150px safety buffer to ensure the absolute bottom is always reached
     const documentHeight = Math.ceil(Math.max(
         document.body.scrollHeight, document.documentElement.scrollHeight,
         document.body.offsetHeight, document.documentElement.offsetHeight,
-        document.body.clientHeight, document.documentElement.clientHeight
-    ));
+        document.body.clientHeight, document.documentElement.clientHeight,
+        document.body.getBoundingClientRect().height,
+        document.documentElement.getBoundingClientRect().height
+    )) + 150;
+
     const documentWidth = Math.ceil(Math.max(
         document.body.scrollWidth, document.documentElement.scrollWidth,
         document.body.offsetWidth, document.documentElement.offsetWidth,
-        document.body.clientWidth, document.documentElement.clientWidth
+        document.body.clientWidth, document.documentElement.clientWidth,
+        document.body.getBoundingClientRect().width,
+        document.documentElement.getBoundingClientRect().width
     ));
 
     const viewportHeight = window.innerHeight;
@@ -75,8 +81,8 @@ async function captureFullPage() {
     const originalOverflow = document.documentElement.style.overflow;
     document.documentElement.style.setProperty('overflow', 'hidden', 'important');
 
-    const scrollStep = Math.floor(viewportHeight * 0.9); // Use 90% step for safety overlap
-    const scrollLimit = Math.max(0, documentHeight - viewportHeight);
+    const scrollStep = Math.floor(viewportHeight * 0.85); // 15% overlap for safety stitching
+    const scrollLimit = Math.max(0, documentHeight - 150 - viewportHeight); // Limit to real height without buffer
 
     const scrollSteps = [];
     let curr = 0;
@@ -84,26 +90,26 @@ async function captureFullPage() {
         scrollSteps.push(curr);
         curr += scrollStep;
     }
-    scrollSteps.push(scrollLimit); // Always include the bottom
+    scrollSteps.push(scrollLimit); // Final step to the absolute bottom
 
     let lastCanvasY = 0;
 
     for (let i = 0; i < scrollSteps.length; i++) {
         const targetY = scrollSteps[i];
         window.scrollTo(0, targetY);
-        // Wait for scroll and rendering stabilization
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Extended wait for rendering stability
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        const actualY = window.scrollY;
+        const actualY = Math.round(window.scrollY);
 
         let filter: 'all' | 'headerOnly' | 'footerOnly' | 'none' = 'all';
         if (i === 0) filter = 'headerOnly';
         else if (i === scrollSteps.length - 1) filter = 'footerOnly';
 
         toggleFixedElements(filter, true);
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 400));
 
-        // Hide UI elements
+        // Hide extension UI
         if (selectionLayer) selectionLayer.style.setProperty('display', 'none', 'important');
         if (recorderWidget) recorderWidget.style.setProperty('visibility', 'hidden', 'important');
         if (drawingCanvas) drawingCanvas.style.setProperty('visibility', 'hidden', 'important');
@@ -112,19 +118,13 @@ async function captureFullPage() {
             chrome.runtime.sendMessage({ action: "captureVisibleTab" }, (response) => resolve(response.dataUrl));
         });
 
-        // Restore UI visibility
-        if (selectionLayer) selectionLayer.style.removeProperty('display');
-        if (recorderWidget) recorderWidget.style.setProperty('visibility', 'visible', 'important');
-        if (drawingCanvas) drawingCanvas.style.setProperty('visibility', 'visible', 'important');
-
         const img = await new Promise<HTMLImageElement>((resolve) => {
             const imgEl = new Image();
             imgEl.onload = () => resolve(imgEl);
             imgEl.src = dataUrl;
         });
 
-        // Calculate where to start drawing this segment to avoid overlaps
-        // lastCanvasY tracks how much of the page height we've already filled
+        // Exact sub-pixel alignment logic
         let sourceY = 0;
         let destY = actualY;
         let drawHeight = viewportHeight;
@@ -136,21 +136,29 @@ async function captureFullPage() {
             drawHeight = viewportHeight - overlap;
         }
 
-        // Final clamp to document height
+        // Final clamp check to prevent overdrawing canvas
         if (destY + drawHeight > documentHeight) {
             drawHeight = documentHeight - destY;
         }
 
         if (drawHeight > 0) {
+            // Use Math.round for all scaled coordinates and dimensions
             ctx.drawImage(img,
-                0, Math.round(sourceY * scale), img.width, Math.round(drawHeight * scale),
-                0, Math.round(destY * scale), img.width, Math.round(drawHeight * scale)
+                0, Math.round(sourceY * scale),
+                Math.round(img.width), Math.round(drawHeight * scale),
+                0, Math.round(destY * scale),
+                Math.round(img.width), Math.round(drawHeight * scale)
             );
             lastCanvasY = destY + drawHeight;
         }
 
         toggleFixedElements('none', false);
     }
+
+    // Restore UI visibility after full capture completes
+    if (selectionLayer) selectionLayer.style.removeProperty('display');
+    if (recorderWidget) recorderWidget.style.setProperty('visibility', 'visible', 'important');
+    if (drawingCanvas) drawingCanvas.style.setProperty('visibility', 'visible', 'important');
 
     const fullDataUrl = canvas.toDataURL('image/png');
     document.documentElement.style.overflow = originalOverflow;
