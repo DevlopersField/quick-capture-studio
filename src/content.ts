@@ -47,16 +47,15 @@ function toggleFixedElements(filter: 'all' | 'headerOnly' | 'footerOnly' | 'none
 
 async function captureFullPage() {
     const originalScrollPos = { x: window.scrollX, y: window.scrollY };
-    // Use Math.ceil to prevent sub-pixel cutoff at the bottom/right
-    // Add a 150px safety buffer to ensure the absolute bottom is always reached
-    const documentHeight = Math.ceil(Math.max(
+
+    // Real document dimensions (without buffer)
+    const realDocumentHeight = Math.ceil(Math.max(
         document.body.scrollHeight, document.documentElement.scrollHeight,
         document.body.offsetHeight, document.documentElement.offsetHeight,
         document.body.clientHeight, document.documentElement.clientHeight,
         document.body.getBoundingClientRect().height,
         document.documentElement.getBoundingClientRect().height
-    )) + 150;
-
+    ));
     const documentWidth = Math.ceil(Math.max(
         document.body.scrollWidth, document.documentElement.scrollWidth,
         document.body.offsetWidth, document.documentElement.offsetWidth,
@@ -65,11 +64,16 @@ async function captureFullPage() {
         document.documentElement.getBoundingClientRect().width
     ));
 
+    // Scrolling limit with 150px buffer for stability
+    const scrollableHeight = realDocumentHeight + 150;
+
     const viewportHeight = window.innerHeight;
     const scale = window.devicePixelRatio;
+
+    // Canvas should only be the REAL size of the page
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(documentWidth * scale);
-    canvas.height = Math.round(documentHeight * scale);
+    canvas.height = Math.round(realDocumentHeight * scale);
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -79,10 +83,16 @@ async function captureFullPage() {
     document.body.appendChild(overlay);
 
     const originalOverflow = document.documentElement.style.overflow;
-    document.documentElement.style.setProperty('overflow', 'hidden', 'important');
+    const originalPaddingBottom = document.body.style.paddingBottom;
+    const originalDocPaddingBottom = document.documentElement.style.paddingBottom;
 
-    const scrollStep = Math.floor(viewportHeight * 0.85); // 15% overlap for safety stitching
-    const scrollLimit = Math.max(0, documentHeight - 150 - viewportHeight); // Limit to real height without buffer
+    document.documentElement.style.setProperty('overflow', 'hidden', 'important');
+    // Extend body to allow scrolling beyond original content
+    document.body.style.setProperty('padding-bottom', '200px', 'important');
+    document.documentElement.style.setProperty('padding-bottom', '200px', 'important');
+
+    const scrollStep = Math.floor(viewportHeight * 0.85);
+    const scrollLimit = Math.max(0, realDocumentHeight - viewportHeight + 200);
 
     const scrollSteps = [];
     let curr = 0;
@@ -90,17 +100,17 @@ async function captureFullPage() {
         scrollSteps.push(curr);
         curr += scrollStep;
     }
-    scrollSteps.push(scrollLimit); // Final step to the absolute bottom
+    scrollSteps.push(scrollLimit);
 
     let lastCanvasY = 0;
 
     for (let i = 0; i < scrollSteps.length; i++) {
         const targetY = scrollSteps[i];
         window.scrollTo(0, targetY);
-        // Extended wait for rendering stability
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        const actualY = Math.round(window.scrollY);
+        // Important: Force actualY to be integer to avoid fractional offsets causing gaps
+        const actualY = Math.floor(window.scrollY);
 
         let filter: 'all' | 'headerOnly' | 'footerOnly' | 'none' = 'all';
         if (i === 0) filter = 'headerOnly';
@@ -109,7 +119,6 @@ async function captureFullPage() {
         toggleFixedElements(filter, true);
         await new Promise(resolve => setTimeout(resolve, 400));
 
-        // Hide extension UI
         if (selectionLayer) selectionLayer.style.setProperty('display', 'none', 'important');
         if (recorderWidget) recorderWidget.style.setProperty('visibility', 'hidden', 'important');
         if (drawingCanvas) drawingCanvas.style.setProperty('visibility', 'hidden', 'important');
@@ -124,7 +133,10 @@ async function captureFullPage() {
             imgEl.src = dataUrl;
         });
 
-        // Exact sub-pixel alignment logic
+        // Track positions in PHYSICAL PIXELS to eliminate rounding gaps
+        // The key insight: we must never independently round destY and drawHeight,
+        // because round(a) + round(b) != round(a+b), causing 1px seams.
+
         let sourceY = 0;
         let destY = actualY;
         let drawHeight = viewportHeight;
@@ -136,18 +148,23 @@ async function captureFullPage() {
             drawHeight = viewportHeight - overlap;
         }
 
-        // Final clamp check to prevent overdrawing canvas
-        if (destY + drawHeight > documentHeight) {
-            drawHeight = documentHeight - destY;
+        // Clip to real document height
+        if (destY + drawHeight > realDocumentHeight) {
+            drawHeight = realDocumentHeight - destY;
         }
 
         if (drawHeight > 0) {
-            // Use Math.round for all scaled coordinates and dimensions
+            // Calculate physical pixel positions using FLOOR for start, CEIL for dimensions
+            // This ensures segments always touch/overlap by 1px rather than having gaps
+            const srcYPx = Math.floor(sourceY * scale);
+            const dstYPx = Math.floor(destY * scale);
+            const drawHPx = Math.ceil(drawHeight * scale);
+
             ctx.drawImage(img,
-                0, Math.round(sourceY * scale),
-                Math.round(img.width), Math.round(drawHeight * scale),
-                0, Math.round(destY * scale),
-                Math.round(img.width), Math.round(drawHeight * scale)
+                0, srcYPx,
+                Math.round(img.width), drawHPx,
+                0, dstYPx,
+                Math.round(img.width), drawHPx
             );
             lastCanvasY = destY + drawHeight;
         }
@@ -162,6 +179,8 @@ async function captureFullPage() {
 
     const fullDataUrl = canvas.toDataURL('image/png');
     document.documentElement.style.overflow = originalOverflow;
+    document.body.style.paddingBottom = originalPaddingBottom;
+    document.documentElement.style.paddingBottom = originalDocPaddingBottom;
     if (document.body.contains(overlay)) document.body.removeChild(overlay);
     window.scrollTo(originalScrollPos.x, originalScrollPos.y);
 

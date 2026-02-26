@@ -441,6 +441,7 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
         canvas.add(text);
         canvas.setActiveObject(text);
         text.enterEditing();
+        text.selectAll();
         setActiveTool("select");
       });
     }
