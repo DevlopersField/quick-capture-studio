@@ -15,7 +15,6 @@
         "unlimitedStorage",
         "tabs",
         "activeTab",
-        "scripting",
         "desktopCapture"
     ],
     "host_permissions": [
