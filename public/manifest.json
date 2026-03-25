@@ -14,8 +14,7 @@
         "storage",
         "unlimitedStorage",
         "tabs",
-        "activeTab",
-        "desktopCapture"
+        "activeTab"
     ],
     "host_permissions": [
         "<all_urls>"

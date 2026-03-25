@@ -549,16 +549,33 @@ export function useCanvas(containerRef: React.RefObject<HTMLDivElement | null>) 
     link.click();
   }, []);
 
-  const exportPDF = useCallback(async () => {
+  const exportPDF = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const { jsPDF } = await import("jspdf");
     const dataURL = canvas.toDataURL({ format: "png", multiplier: 2 });
-    const pdf = new jsPDF({ orientation: "landscape" });
-    const w = pdf.internal.pageSize.getWidth();
-    const h = pdf.internal.pageSize.getHeight();
-    pdf.addImage(dataURL, "PNG", 0, 0, w, h);
-    pdf.save("1clickcapture-export.pdf");
+
+    // Native browser print-to-PDF — no external libraries needed
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;width:0;height:0;border:0;opacity:0;";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) { document.body.removeChild(iframe); return; }
+
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { background: #fff; }
+      img { width: 100%; height: 100vh; object-fit: contain; display: block; }
+      @page { margin: 0; size: landscape; }
+    </style></head><body><img src="${dataURL}" /></body></html>`);
+    doc.close();
+
+    iframe.contentWindow?.focus();
+    setTimeout(() => {
+      iframe.contentWindow?.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 300);
   }, []);
 
   const copyToClipboard = useCallback(async () => {
