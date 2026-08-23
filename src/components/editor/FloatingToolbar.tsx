@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
-import { Undo2, Redo2, Clipboard, MousePointer2, Square, MoveRight, Pencil, Type, MessageCircle, Trash2, Upload, Camera, Download, Check, MessageSquare } from "lucide-react";
+import { Undo2, Redo2, Clipboard, MousePointer2, Square, MoveRight, Pencil, Type, MessageCircle, Trash2, Upload, Camera, Download, Check, MessageSquare, MonitorUp, Video, PictureInPicture2, Loader2 } from "lucide-react";
 import type { ToolType } from "@/hooks/useCanvas";
-import type { RecordingState } from "@/hooks/useRecorder";
+import type { RecordingState, RecordingMode } from "@/hooks/useRecorder";
+import type { CaptureMode } from "@/hooks/useCapture";
 import { RecordingController } from "./RecordingController";
 
 interface Props {
@@ -16,7 +17,7 @@ interface Props {
   recorderState: RecordingState;
   recorderElapsed: number;
   recorderIsMuted: boolean;
-  onRecordStart: () => void;
+  onRecordStart: (mode: RecordingMode) => void;
   onRecordStop: () => void;
   onRecordPause: () => void;
   onRecordResume: () => void;
@@ -25,10 +26,18 @@ interface Props {
   // Action props
   onUpload: () => void;
   onExport: () => void;
+  onCapture: (mode: CaptureMode) => void;
+  capturing: CaptureMode | null;
 
   strokeColor: string;
   onColorChange: (color: string) => void;
 }
+
+const captureModes: { id: CaptureMode; icon: React.ElementType; label: string; hint: string }[] = [
+  { id: "screen", icon: MonitorUp, label: "Screen Only", hint: "Capture your screen" },
+  { id: "camera", icon: Video, label: "Camera Only", hint: "Capture your webcam" },
+  { id: "both", icon: PictureInPicture2, label: "Screen + Camera", hint: "Webcam overlay on screen" },
+];
 
 const colors = [
   { label: "Cyan", value: "#00d4ff" },
@@ -53,11 +62,12 @@ export function FloatingToolbar({
   recorderState, recorderElapsed, recorderIsMuted,
   onRecordStart, onRecordStop, onRecordPause, onRecordResume,
   onRecordToggleMute, formatTime,
-  onUpload, onExport,
+  onUpload, onExport, onCapture, capturing,
   strokeColor, onColorChange,
 }: Props) {
   const isRecording = recorderState === "recording" || recorderState === "paused";
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showCaptureMenu, setShowCaptureMenu] = useState(false);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 px-4 pointer-events-none animate-slide-up">
@@ -157,6 +167,46 @@ export function FloatingToolbar({
 
         {/* === Actions (Right) === */}
         <div className="flex items-center gap-1">
+          <div className="relative">
+            <button
+              onClick={() => setShowCaptureMenu((v) => !v)}
+              disabled={capturing !== null}
+              title="Capture"
+              className={`p-2.5 rounded-xl transition-all duration-200 disabled:opacity-60 ${showCaptureMenu
+                ? "bg-primary text-primary-foreground glow-cyan-sm scale-105"
+                : "text-muted-foreground hover:text-foreground hover:bg-surface-hover"
+                }`}
+            >
+              {capturing !== null ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Camera size={18} />
+              )}
+            </button>
+
+            {showCaptureMenu && (
+              <div className="absolute bottom-full right-0 mb-4 flex flex-col gap-1 p-1.5 w-56 glass-panel rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-xl">
+                {captureModes.map(({ id, icon: Icon, label, hint }, i) => (
+                  <button
+                    key={id}
+                    onClick={() => {
+                      onCapture(id);
+                      setShowCaptureMenu(false);
+                    }}
+                    style={{ animationDelay: `${i * 40}ms` }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-all duration-200 hover:scale-[1.02] animate-in fade-in slide-in-from-left-1"
+                  >
+                    <Icon size={17} className="shrink-0 text-primary" />
+                    <span className="flex flex-col">
+                      <span className="text-sm font-medium leading-tight">{label}</span>
+                      <span className="text-[11px] text-muted-foreground/70 leading-tight">{hint}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button
             onClick={onUpload}
             title="Upload Image"

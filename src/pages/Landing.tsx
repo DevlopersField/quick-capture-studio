@@ -32,9 +32,6 @@ export default function Landing() {
                         >
                             Open Studio <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                         </Link>
-                        <button className="px-8 py-4 rounded-2xl bg-secondary text-secondary-foreground text-lg font-bold hover:bg-secondary/80 transition-all border border-border/40">
-                            Add to Chrome
-                        </button>
                     </div>
 
                     {/* Feature Grid from User Guide */}

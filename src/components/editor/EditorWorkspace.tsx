@@ -2,6 +2,7 @@ import { useRef, useCallback, useState, useEffect } from "react";
 import { Camera, MessageCircle, Sun, Moon, Monitor } from "lucide-react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useRecorder } from "@/hooks/useRecorder";
+import { useCapture, type CaptureMode } from "@/hooks/useCapture";
 import { usePictureInPicture } from "@/hooks/usePictureInPicture";
 import { useTheme } from "@/hooks/useTheme";
 import { useSearchParams } from "react-router-dom";
@@ -9,6 +10,7 @@ import { FloatingToolbar } from "./FloatingToolbar";
 import { CommentPanel } from "./CommentPanel";
 import { ExportModal } from "./ExportModal";
 import { PiPController } from "./PiPController";
+import { WebcamBubble } from "./WebcamBubble";
 
 
 import { Logo } from "../layout/Logo";
@@ -32,8 +34,14 @@ export function EditorWorkspace() {
   } = useCanvas(containerRef);
 
   const recorder = useRecorder();
+  const { capturing, capture } = useCapture();
   const { pipWindow, openPiP, closePiP } = usePictureInPicture();
   const { theme, setTheme } = useTheme();
+
+  const handleCapture = useCallback(async (mode: CaptureMode) => {
+    const dataUrl = await capture(mode);
+    if (dataUrl) loadImage(dataUrl);
+  }, [capture, loadImage]);
 
   // Handle query parameters from extension popup
   useEffect(() => {
@@ -240,10 +248,31 @@ export function EditorWorkspace() {
         formatTime={recorder.formatTime}
         onUpload={() => fileInputRef.current?.click()}
         onExport={() => setShowExport(true)}
+        onCapture={handleCapture}
+        capturing={capturing}
         strokeColor={strokeColor}
         onColorChange={setStrokeColor}
         hasSelection={hasSelection}
       />
+
+      {/* Draggable/resizable webcam bubble — live position feeds the "Screen + Camera" recording */}
+      {recorder.mode === "both" && isRecording && recorder.camPreviewStream && (
+        <WebcamBubble
+          stream={recorder.camPreviewStream}
+          rect={recorder.pipRect}
+          onChange={recorder.setPipRect}
+        />
+      )}
+
+      {/* Camera Only — plain self-view so you can see your face while recording */}
+      {recorder.mode === "camera" && isRecording && recorder.camPreviewStream && (
+        <WebcamBubble
+          stream={recorder.camPreviewStream}
+          rect={recorder.pipRect}
+          onChange={recorder.setPipRect}
+          interactive={false}
+        />
+      )}
 
       {/* PiP Controller (rendered in separate window) */}
       {pipWindow && (
